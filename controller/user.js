@@ -74,35 +74,61 @@ export const register = async (req, res, next) => {
 };
 
 
-export const login = async (req, res, next) => {
+// export const login = async (req, res, next) => {
+//     try {
+//         const { email, password } = req.body;
+
+//         if (!email || !password) {
+//             return res.status(400).json({ message: "Email and password are required." });
+//         }
+
+//         const user = await User.findOne({ email }).select("+password");
+
+//         if (!user) {
+//             return res.status(401).json({ message: "Invalid email or password." });
+//         }
+
+//         const isPasswordValid = await user.comparePassword(password);
+
+//         if (!isPasswordValid) {
+//             return res.status(401).json({ message: "Invalid email or password." });
+//         }
+
+//         sendToken(user, 200, res);
+
+//         // console.log(res);
+
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json({
+//             message: "System error occurred.",
+//             success: false,
+//         });
+//     }
+// };
+
+
+export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ message: "Email and password are required." });
-        }
-
-        const user = await User.findOne({ email }).select("+password");
-
-        if (!user) {
-            return res.status(401).json({ message: "Invalid email or password." });
-        }
-
-        const isPasswordValid = await user.comparePassword(password);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid email or password." });
-        }
-
-        sendToken(user, 200, res);
-
-        // console.log(res);
-
+        // const { email, password } = req.body;
+        // const user = await
+        // User.findOne({ email });
+        // if (user && (await user.matchPassword(password))) {
+        //     res.json({
+        //         _id: user._id,
+        //         name: user.name,
+        //         email: user.email,
+        //         isAdmin: user.isAdmin,
+        //         token: generateToken(user._id),
+        //     });
+        // } else {
+        //     res.status(401);
+        //     throw new Error("Invalid email or password");
+        // }
+        res.json({
+                    message: "Connected Pare",
+                });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            message: "System error occurred.",
-            success: false,
-        });
+        res.status(401).json({ message: error.message });
     }
 };
