@@ -8,7 +8,8 @@ const router = express.Router();
 import { login, register } from '../controller/user.js';
 
 // USE ROUTES
-router.get('/login',  login);
+// router.get('/login',  login);
+router.post('/login',  login);
 router.post('/register',  upload.array('images'), register);
 
 export default router;
