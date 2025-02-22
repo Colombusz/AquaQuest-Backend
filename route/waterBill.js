@@ -6,8 +6,8 @@ const router = express.Router();
 
 import { extractBillDetails, uploadAndAnalyze, getAllBills } from '../controller/waterBill.js'
 
-router.post('/upload', upload.array('imageUrl'), uploadAndAnalyze);
-router.get('/bills',  getAllBills);
+router.post('/upload', isAuthenticated, upload.array('imageUrl'), uploadAndAnalyze);
+router.get('/bills',  isAuthenticated, getAllBills);
 
 
 export default router;
