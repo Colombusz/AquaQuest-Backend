@@ -1,3 +1,4 @@
+// OG CODE WAG BURAHIN
 import axios from "axios";
 
 export const getPrediction = async (req, res) => {
@@ -20,6 +21,9 @@ export const getPrediction = async (req, res) => {
         return res.status(500).json({ error: "Prediction service unavailable. Please check the Python server." });
     }
 };
+
+
+
 
 
 // import axios from "axios";
