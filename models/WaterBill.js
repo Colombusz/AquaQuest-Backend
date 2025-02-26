@@ -19,11 +19,10 @@ const WaterBillModel = new mongoose.Schema({
         type: String, 
         required: true 
     },
-
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User', // Reference to the User model
-        required: true, // Ensure that each water bill is linked to a user
+        ref: 'User',
+        required: true, 
     }
     
 }, { timestamps: true });
