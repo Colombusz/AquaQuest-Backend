@@ -116,7 +116,7 @@
             }));
 
             // Request prediction from Flask
-            const flaskResponse = await axios.post("http://127.0.0.1:5001/api/predict-cost", {
+            const flaskResponse = await axios.post("https://aquaquest-flask.onrender.com/api/predict-cost", {
                 past_data: pastData,
                 months_ahead: 1 
             });
@@ -150,7 +150,7 @@
             }));
 
             // Request prediction from Flask
-            const flaskResponse = await axios.post("http://127.0.0.1:5001/api/predict-consumption", {
+            const flaskResponse = await axios.post("https://aquaquest-flask.onrender.com/api/predict-consumption", {
                 past_data: pastData,
                 months_ahead: 1 
             });
