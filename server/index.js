@@ -2,26 +2,43 @@ import express from "express";
 import { connectDB } from "../config/db.js";
 import dotenv from "dotenv";
 import cloudinary from "cloudinary";
-
+import cors from "cors";
 
 dotenv.config();
 const PORT = process.env.PORT || 5000;
 const app = express();
-app.use(express.json()); 
 
-  
+
+app.use(
+  cors({
+    origin: "http://localhost:5173", 
+    credentials: false, 
+  })
+);
+
+app.use(cors()); // Enable CORS for all origins
+app.use(express.json()); 
 
 // IMPORT ROUTES
 import userRoutes from "../route/user.js";
 import waterBillRoutes from "../route/waterBill.js";
 import chartAnalyticsRoutes from "../route/chartAnalytics.js";
-
+import adminRoutes from "../route/admin.js";
 
 // USE ROUTES
 app.use("/api", userRoutes);
 app.use("/api/waterBill", waterBillRoutes);
 app.use("/api/chart", chartAnalyticsRoutes);
+app.use("/api/admin", adminRoutes);
 
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
 
 
 cloudinary.v2.config({
