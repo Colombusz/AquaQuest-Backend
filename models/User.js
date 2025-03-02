@@ -51,7 +51,15 @@ const userModel = new mongoose.Schema({
         default: 'user'
     },
 
-    notificationToken: String
+    
+    notificationToken: String,
+
+    status: {
+        type: String,
+        enum: ['unverified', 'verified'],
+        default: 'unverified'
+    }
+    
 }, { timestamps: true });
 
 // Encrypt password before saving to database

@@ -77,35 +77,41 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const getTotalWaterBillsPerMonth = async (req, res) => {
-    try {
-        const billsByMonth = await WaterBill.aggregate([
-          {
-            $project: {
-              month: { $substr: ["$billDate", 3, 2] }, // Extract characters at index 3 and 4 (MM)
-            },
+  try {
+    const billsByMonthYear = await WaterBill.aggregate([
+      {
+        $project: {
+          year: { $substr: ["$billDate", 6, 4] }, // Extract characters at index 6-9 (YYYY)
+          month: { $substr: ["$billDate", 3, 2] }, // Extract characters at index 3-4 (MM)
+        },
+      },
+      {
+        $group: {
+          _id: { 
+            year: { $toInt: "$year" }, 
+            month: { $toInt: "$month" }
           },
-          {
-            $group: {
-              _id: { $toInt: "$month" }, // Convert extracted month to integer
-              amount: { $sum: 1 }, // Count total bills per month
-            },
-          },
-          { $sort: { _id: 1 } }, // Sort by month ascending
-        ]);
+          amount: { $sum: 1 }, // Count total bills per month-year
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort by year then month
+    ]);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const formattedData = billsByMonthYear.map((item) => ({
+      year: item._id.year,
+      month: monthNames[item._id.month - 1], // Convert month number to name
+      amount: item.amount,
+      label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Add label for frontend
+    }));
     
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    
-        const formattedData = billsByMonth.map((item) => ({
-          month: monthNames[item._id - 1], // Convert month number to name
-          amount: item.amount,
-        }));
-    
-        res.json(formattedData);
-      } catch (error) {
-        console.error("Error fetching water bills by month:", error);
-        res.status(500).json({ error: "Server error" });
-      }
-    };
+    res.json(formattedData);
+  } catch (error) {
+    console.error("Error fetching water bills by month and year:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 export const getWaterBillCategories = async (req, res) => {
         try {

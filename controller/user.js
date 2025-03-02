@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import cloudinary from 'cloudinary';
 import { sendToken } from '../utils/jwtToken.js';
+import { sendMail } from '../utils/mailer.js';
 
 export const saveToken = async (req, res, next) => {
     try {
@@ -18,6 +19,109 @@ export const saveToken = async (req, res, next) => {
         });
     }
 }
+
+// export const register = async (req, res, next) => {
+
+//     try {
+//         const { first_name, last_name, address, email, password } = req.body;
+
+//         if (!first_name || !last_name || !address || !email || !password) {
+//             return res.status(400).json({ message: "All fields are required." });
+//         }
+
+//         const existingUser = await User.findOne({ email });
+//         if (existingUser) {
+//             return res.status(400).json({ message: "User already exists." });
+//         }
+
+//         let images = [];
+
+//         if (req.files && req.files.length > 0) {
+//             for (let i = 0; i < req.files.length; i++) {
+//                 const data = await cloudinary.v2.uploader.upload(req.files[i].path);
+//                 images.push({
+//                     public_id: data.public_id,
+//                     url: data.url,
+//                 });
+//             }
+//         } else {
+//             images = [{
+//                 public_id: 'vvzvenkeapwpdwzbhugg',
+//                 url: 'http://res.cloudinary.com/dlqclovym/image/upload/v1739675832/vvzvenkeapwpdwzbhugg.png'
+//             }];
+//         }
+
+//         const user = await User.create({
+//             first_name,
+//             last_name,
+//             address,
+//             email,
+//             password,
+//             role: 'user',
+//             images,
+//         });
+
+//         res.status(201).json({
+//             message: "Account created successfully",
+//             user,
+//         });
+//     } catch (error) {
+//         console.log(error);
+//         res.status(500).json({
+//             message: "System error occurred.",
+//             success: false,
+//         });
+//     }
+// };
+
+// TRIAL LOGIN IF MAG CCONNECT SA MONGODB
+// export const login = async (req, res) => {
+//     try {
+//         // const { email, password } = req.body;
+//         // const user = await
+//         // User.findOne({ email });
+//         // if (user && (await user.matchPassword(password))) {
+//         //     res.json({
+//         //         _id: user._id,
+//         //         name: user.name,
+//         //         email: user.email,
+//         //         isAdmin: user.isAdmin,
+//         //         token: generateToken(user._id),
+//         //     });
+//         // } else {`
+//         //     res.status(401);
+//         //     throw new Error("Invalid email or password");
+//         // }
+//         res.json({
+//                     message: "Connected Pare",
+//                 });
+//     } catch (error) {
+//         res.status(401).json({ message: error.message });
+//     }
+// };
+export const verifyUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (user.status === "verified") {
+            return res.status(400).json({ message: "User is already verified." });
+        }
+
+        user.status = "verified";
+        await user.save();
+
+        res.status(200).json({ message: "Account successfully verified!" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "System error occurred." });
+    }
+};
 
 export const register = async (req, res, next) => {
     try {
@@ -57,10 +161,34 @@ export const register = async (req, res, next) => {
             password,
             role: 'user',
             images,
+            status: "unverified"
         });
 
+        // Generate verification link
+        const verificationLink = `https://aqua-quest-backend-deployment.onrender.com/api/verify/${user._id}`;
+
+        // Send verification email
+        const subject = "Verify Your Water App Account";
+        const text = `Hello ${first_name},\n\nClick the link below to verify your email:\n\n${verificationLink}`;
+        const html = `
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+                <div style="max-width: 600px; background: #ffffff; padding: 20px; border-radius: 10px; text-align: center;">
+                    <img src="https://your-logo-url.com/logo.png" alt="Water App Logo" style="width: 100px; margin-bottom: 20px;">
+                    <h2>Welcome to Water App, ${first_name}!</h2>
+                    <p>You're almost there! Click the button below to verify your email and activate your account.</p>
+                    <a href="${verificationLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Verify Your Email</a>
+                    <p>If the button doesn’t work, click the link below:</p>
+                    <p><a href="${verificationLink}">${verificationLink}</a></p>
+                    <p style="font-size: 12px; color: #666;">If you did not create this account, please ignore this email.</p>
+                </div>
+            </body>
+            </html>
+        `;
+        await sendMail(email, subject, text, html);
+
         res.status(201).json({
-            message: "Account created successfully",
+            message: "Account created successfully. Please check your email to verify your account.",
             user,
         });
     } catch (error) {
@@ -71,32 +199,6 @@ export const register = async (req, res, next) => {
         });
     }
 };
-
-// TRIAL LOGIN IF MAG CCONNECT SA MONGODB
-// export const login = async (req, res) => {
-//     try {
-//         // const { email, password } = req.body;
-//         // const user = await
-//         // User.findOne({ email });
-//         // if (user && (await user.matchPassword(password))) {
-//         //     res.json({
-//         //         _id: user._id,
-//         //         name: user.name,
-//         //         email: user.email,
-//         //         isAdmin: user.isAdmin,
-//         //         token: generateToken(user._id),
-//         //     });
-//         // } else {
-//         //     res.status(401);
-//         //     throw new Error("Invalid email or password");
-//         // }
-//         res.json({
-//                     message: "Connected Pare",
-//                 });
-//     } catch (error) {
-//         res.status(401).json({ message: error.message });
-//     }
-// };
 
 
 // login running as api
@@ -112,6 +214,10 @@ export const login = async (req, res, next) => {
 
         if (!user) {
             return res.status(401).json({ message: "Invalid email or password." });
+        }
+
+        if (user.status !== "verified") {
+            return res.status(403).json({ message: "Please verify your email before logging in." });
         }
 
         const isPasswordValid = await user.comparePassword(password);
