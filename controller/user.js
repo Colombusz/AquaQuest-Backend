@@ -168,14 +168,14 @@ export const register = async (req, res, next) => {
         const verificationLink = `https://aqua-quest-backend-deployment.onrender.com/api/verify/${user._id}`;
 
         // Send verification email
-        const subject = "Verify Your Water App Account";
+        const subject = "Verify Your Aqua Quest Account";
         const text = `Hello ${first_name},\n\nClick the link below to verify your email:\n\n${verificationLink}`;
         const html = `
             <html>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
                 <div style="max-width: 600px; background: #ffffff; padding: 20px; border-radius: 10px; text-align: center;">
-                    <img src="https://your-logo-url.com/logo.png" alt="Water App Logo" style="width: 100px; margin-bottom: 20px;">
-                    <h2>Welcome to Water App, ${first_name}!</h2>
+                    <img src="https://your-logo-url.com/logo.png" alt="Aqua Quest Logo" style="width: 100px; margin-bottom: 20px;">
+                    <h2>Welcome to Aqua Quest, ${first_name}!</h2>
                     <p>You're almost there! Click the button below to verify your email and activate your account.</p>
                     <a href="${verificationLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Verify Your Email</a>
                     <p>If the button doesn’t work, click the link below:</p>
