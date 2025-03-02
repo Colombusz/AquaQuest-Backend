@@ -56,49 +56,135 @@ import mongoose from "mongoose";
 import axios from "axios";
 
 // OG 
+// export const getMonthlyCost = async (req, res) => {
+//     try {
+//         const userId = req.user.id;
+
+//         const result = await WaterBill.aggregate([
+//             { $match: { user: new mongoose.Types.ObjectId(userId) } },
+//             {
+//                 $group: {
+//                     _id: { $substr: ["$billDate", 3, 7] },
+//                     totalCost: { $sum: "$billAmount" },
+//                 },
+//             },
+//             { $sort: { "_id": 1 } }
+//         ]);
+
+//         res.json(result);
+//     } catch (error) {
+//         console.error("Error fetching monthly cost:", error);
+//         res.status(500).json({ error: "Failed to fetch monthly cost.", details: error.message });
+//     }
+// };
+// OG
+// export const getMonthlyConsumption = async (req, res) => {
+//     try {
+//         const userId = req.user.id;
+
+//         const result = await WaterBill.aggregate([
+//             { $match: { user: new mongoose.Types.ObjectId(userId) } },
+//             {
+//                 $group: {
+//                     _id: { $substr: ["$billDate", 3, 7] },
+//                     totalConsumption: { $sum: "$waterConsumption" },
+//                 },
+//             },
+//             { $sort: { "_id": 1 } }
+//         ]);
+
+//         res.json(result);
+//     } catch (error) {
+//         console.error("Error fetching monthly consumption:", error);
+//         res.status(500).json({ error: "Failed to fetch monthly consumption.", details: error.message });
+//     }
+// };
+
 export const getMonthlyCost = async (req, res) => {
     try {
-        const userId = req.user.id;
-
-        const result = await WaterBill.aggregate([
-            { $match: { user: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: { $substr: ["$billDate", 3, 7] },
-                    totalCost: { $sum: "$billAmount" },
-                },
+      const userId = req.user.id;
+  
+      // Aggregate the total cost per month
+      const result = await WaterBill.aggregate([
+        { $match: { user: new mongoose.Types.ObjectId(userId) } },
+        {
+          $project: {
+            year: { $substr: ["$billDate", 6, 4] }, // Extract year
+            month: { $substr: ["$billDate", 3, 2] }, // Extract month
+            billAmount: 1,
+          },
+        },
+        {
+          $group: {
+            _id: { 
+              year: { $toInt: "$year" }, 
+              month: { $toInt: "$month" },
             },
-            { $sort: { "_id": 1 } }
-        ]);
-
-        res.json(result);
+            totalCost: { $sum: "$billAmount" }, // Calculate total cost for the month
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort by year and month
+      ]);
+  
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+      const formattedData = result.map((item) => ({
+        year: item._id.year,
+        month: monthNames[item._id.month - 1], // Convert month number to name
+        totalCost: item.totalCost,
+        label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Label for frontend
+      }));
+  
+      res.json(formattedData);
     } catch (error) {
-        console.error("Error fetching monthly cost:", error);
-        res.status(500).json({ error: "Failed to fetch monthly cost.", details: error.message });
+      console.error("Error fetching monthly cost:", error);
+      res.status(500).json({ error: "Failed to fetch monthly cost.", details: error.message });
     }
-};
-// OG
-export const getMonthlyConsumption = async (req, res) => {
+  };
+  
+
+  export const getMonthlyConsumption = async (req, res) => {
     try {
-        const userId = req.user.id;
-
-        const result = await WaterBill.aggregate([
-            { $match: { user: new mongoose.Types.ObjectId(userId) } },
-            {
-                $group: {
-                    _id: { $substr: ["$billDate", 3, 7] },
-                    totalConsumption: { $sum: "$waterConsumption" },
-                },
+      const userId = req.user.id;
+  
+      // Aggregate the total water consumption per month
+      const result = await WaterBill.aggregate([
+        { $match: { user: new mongoose.Types.ObjectId(userId) } },
+        {
+          $project: {
+            year: { $substr: ["$billDate", 6, 4] }, // Extract year
+            month: { $substr: ["$billDate", 3, 2] }, // Extract month
+            waterConsumption: 1,
+          },
+        },
+        {
+          $group: {
+            _id: { 
+              year: { $toInt: "$year" }, 
+              month: { $toInt: "$month" },
             },
-            { $sort: { "_id": 1 } }
-        ]);
-
-        res.json(result);
+            totalConsumption: { $sum: "$waterConsumption" }, // Calculate total consumption for the month
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort by year and month
+      ]);
+  
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  
+      const formattedData = result.map((item) => ({
+        year: item._id.year,
+        month: monthNames[item._id.month - 1], // Convert month number to name
+        totalConsumption: item.totalConsumption,
+        label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Label for frontend
+      }));
+  
+      res.json(formattedData);
     } catch (error) {
-        console.error("Error fetching monthly consumption:", error);
-        res.status(500).json({ error: "Failed to fetch monthly consumption.", details: error.message });
+      console.error("Error fetching monthly consumption:", error);
+      res.status(500).json({ error: "Failed to fetch monthly consumption.", details: error.message });
     }
-};
+  };
+  
 
 export const getPredictedCost = async (req, res) => {
     try {
