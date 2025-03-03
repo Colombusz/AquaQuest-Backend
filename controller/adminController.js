@@ -80,21 +80,19 @@ export const getTotalWaterBillsPerMonth = async (req, res) => {
   try {
     const billsByMonthYear = await WaterBill.aggregate([
       {
-        $project: {
-          year: { $substr: ["$billDate", 6, 4] }, // Extract characters at index 6-9 (YYYY)
-          month: { $substr: ["$billDate", 3, 2] }, // Extract characters at index 3-4 (MM)
-        },
+        $addFields: {
+          billDate: { $toDate: "$billDate" } // Ensure billDate is a Date object
+        }
       },
       {
         $group: {
-          _id: { 
-            year: { $toInt: "$year" }, 
-            month: { $toInt: "$month" }
-          },
-          amount: { $sum: 1 }, // Count total bills per month-year
-        },
+          _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
+          total: { $sum: "$billAmount" } // Use billAmount instead of amount
+        }
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort by year then month
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 } // Ensure sorted data
+      }
     ]);
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -102,16 +100,21 @@ export const getTotalWaterBillsPerMonth = async (req, res) => {
     const formattedData = billsByMonthYear.map((item) => ({
       year: item._id.year,
       month: monthNames[item._id.month - 1], // Convert month number to name
-      amount: item.amount,
-      label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Add label for frontend
+      amount: item.total, // Use correct field
+      label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Label for frontend
     }));
-    
+
+    console.log("✅ Total Water Bills Per Month Data:", formattedData); // Debugging
+
     res.json(formattedData);
   } catch (error) {
-    console.error("Error fetching water bills by month and year:", error);
+    console.error("❌ Error fetching total water bills per month:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
 
 export const getWaterBillCategories = async (req, res) => {
         try {
@@ -142,28 +145,41 @@ export const getWaterBillCategories = async (req, res) => {
         }
       };
 
-export const getWaterConsumptionTrend = async (req, res) => {
+
+      export const getWaterConsumptionTrend = async (req, res) => {
         try {
-          const billsByMonth = await WaterBill.aggregate([
-            {
-              $group: {
-                _id: { $month: { $dateFromString: { dateString: "$billDate", format: "%d-%m-%Y" } } }, 
-                totalConsumption: { $sum: "$waterConsumption" }, 
-              },
-            },
-            { $sort: { _id: 1 } }, 
-          ]);
-      
-          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      
-          const formattedData = billsByMonth.map((item) => ({
-            month: monthNames[item._id - 1], 
-            amount: item.totalConsumption, 
-          }));
-      
-          res.json(formattedData);
+            const consumptionByMonth = await WaterBill.aggregate([
+                {
+                    $addFields: {
+                        billDate: { $toDate: "$billDate" } // Ensure billDate is a Date object
+                    }
+                },
+                {
+                    $group: {
+                        _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
+                        totalConsumption: { $sum: "$waterConsumption" }, // Total consumption
+                        totalBills: { $sum: 1 } // Count of bills in that month
+                    }
+                },
+                {
+                    $sort: { "_id.year": 1, "_id.month": 1 } // Sort in chronological order
+                }
+            ]);
+    
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+            const formattedData = consumptionByMonth.map((item) => ({
+                month: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Format "YYYY - MMM"
+                averageConsumption: item.totalConsumption / item.totalBills, // Average consumption per bill
+                totalBills: item.totalBills // Total number of bills
+            }));
+    
+            console.log("✅ Water Consumption Trend Data:", formattedData); // Debugging
+    
+            res.json(formattedData);
         } catch (error) {
-          console.error("Error fetching water consumption trend:", error);
-          res.status(500).json({ error: "Server error" });
+            console.error("❌ Error fetching water consumption trend:", error);
+            res.status(500).json({ error: "Server error" });
         }
-      };
+    };
+    
