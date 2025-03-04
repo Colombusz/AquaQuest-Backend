@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTotalUsers, getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAllUsers, adminLogin, adminLogout } from '../controller/adminController.js';
+import { getTotalUsers, getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAllUsers, adminLogin, adminLogout, getPlayerEngagement } from '../controller/adminController.js';
 import { isAdmin } from "../middleware/auth.js";
 const router = express.Router();
 
@@ -12,6 +12,7 @@ router.get('/total-users', async (req, res) => {
     }
 });
 
+router.get("/player-engagement", getPlayerEngagement);
 router.get("/total-waterbills", getTotalWaterBills);
 router.get("/total-waterbills-monthly", getTotalWaterBillsPerMonth);
 router.get("/water-bill-categories", getWaterBillCategories);

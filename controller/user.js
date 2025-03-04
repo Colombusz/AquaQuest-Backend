@@ -2,7 +2,16 @@ import User from '../models/User.js';
 import cloudinary from 'cloudinary';
 import { sendToken } from '../utils/jwtToken.js';
 import { sendMail } from '../utils/mailer.js';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+cloudinary.v2.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+    
 export const saveToken = async (req, res, next) => {
     try {
         const user = await User.findById(req.user._id);
@@ -99,6 +108,140 @@ export const saveToken = async (req, res, next) => {
 //         res.status(401).json({ message: error.message });
 //     }
 // };
+
+
+// export const getUserProfile = async (req, res) => {
+//     try {
+//         console.log("User data from token:", req.user); // Debugging log
+
+//         if (!req.user || !req.user.id) {
+//             return res.status(401).json({ message: "Unauthorized, user not found" });
+//         }
+
+//         const user = await User.findById(req.user.id).select("-password");
+
+//         if (!user) {
+//             return res.status(404).json({ message: "User not found" });
+//         }
+
+//         res.json({
+//             first_name: user.first_name,
+//             last_name: user.last_name,
+//             address: user.address,
+//             email: user.email,
+//         });
+//     } catch (error) {
+//         console.error("Profile fetch error:", error);
+//         res.status(500).json({ message: "Server error", error: error.message });
+//     }
+// };
+
+export const getUserProfile = async (req, res) => {
+    try {
+        console.log("User data from token:", req.user); 
+
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: "Unauthorized, user not found" });
+        }
+
+        const user = await User.findById(req.user.id).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({
+            first_name: user.first_name,
+            last_name: user.last_name,
+            address: user.address,
+            email: user.email,
+            images: user.images ? user.images.url : null,  
+        });
+
+    } catch (error) {
+        console.error("Profile fetch error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// export const updateUserProfile = async (req, res) => {
+//     try {
+//         if (!req.user || !req.user.id) {
+//             return res.status(401).json({ message: "Unauthorized, user not found" });
+//         }
+
+//         const { first_name, last_name, address, email, password } = req.body;
+
+//         const user = await User.findById(req.user.id);
+//         if (!user) {
+//             return res.status(404).json({ message: "User not found" });
+//         }
+
+//         if (first_name) user.first_name = first_name;
+//         if (last_name) user.last_name = last_name;
+//         if (address) user.address = address;
+//         if (email) user.email = email;
+
+//         if (password && password.trim() !== "") {
+//             user.password = password; 
+//         }
+
+//         await user.save(); 
+//         res.json({ message: "Profile updated successfully", user });
+//     } catch (error) {
+//         console.error("Profile update error:", error);
+//         res.status(500).json({ message: "Server error", error: error.message });
+//     }
+// };
+export const updateUserProfile = async (req, res) => {
+    try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: "Unauthorized, user not found" });
+        }
+
+        const { first_name, last_name, address, email, password } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (first_name) user.first_name = first_name;
+        if (last_name) user.last_name = last_name;
+        if (address) user.address = address;
+        if (email) user.email = email;
+
+        // Handle password update
+        if (password && password.trim() !== "") {
+            user.password = password; 
+        }
+
+        // Handle profile image upload to Cloudinary
+        if (req.file) {
+            // If a previous image exists, delete it from Cloudinary
+            if (user.images && user.images.public_id) {
+                await cloudinary.v2.uploader.destroy(user.images.public_id);
+            }
+
+            // Upload new image
+            const uploadedImage = await cloudinary.v2.uploader.upload(req.file.path);
+
+            // Save image data to user profile
+            user.images = {
+                public_id: uploadedImage.public_id,
+                url: uploadedImage.secure_url,
+            };
+        }
+
+        await user.save();
+        res.json({ message: "Profile updated successfully", user });
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
 export const verifyUser = async (req, res) => {
     try {
         const { id } = req.params;
