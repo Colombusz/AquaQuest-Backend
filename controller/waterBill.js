@@ -255,8 +255,6 @@ export const extractBillDetails = (text) => {
     };
 };
 
-
-
 // OG CODE
 export const uploadAndAnalyze = async (req, res) => {
     console.log("Files received:", req.files);
@@ -309,40 +307,6 @@ export const uploadAndAnalyze = async (req, res) => {
     }
 };
 
-// TRIAL
-// export const uploadAndAnalyze = async (req, res) => {
-//     try {
-//         if (!req.file) {
-//             return res.status(400).json({ error: "No file uploaded." });
-//         }
-
-//         const imagePath = req.file.path;
-
-//         // Use Tesseract to extract text from the image
-//         const { data: { text } } = await Tesseract.recognize(imagePath, "eng");
-
-//         // Extract bill details from the OCR text
-//         const { billAmount, waterConsumption, billDate } = extractBillDetails(text);
-
-//         // Ensure billDate is correctly stored as a Date object
-//         const newBill = new WaterBill({
-//             user: req.user.id,
-//             billAmount,
-//             waterConsumption,
-//             billDate, // Now it's stored as a proper Date object
-//             imagePath
-//         });
-
-//         // Save to MongoDB
-//         await newBill.save();
-
-//         res.status(201).json({ message: "Bill uploaded and analyzed successfully.", newBill });
-//     } catch (error) {
-//         console.error("Error processing bill:", error);
-//         res.status(500).json({ error: "Error processing the bill." });
-//     }
-// };
-
 export const getAllBills = async (req, res) => {
     try {
         const userId = req.user.id; 
@@ -373,119 +337,3 @@ export const getLatestBill = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
-
-// TRIAL
-// export const getLatestBill = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-
-//         const latestBill = await WaterBill.findOne({ user: userId })
-//                                           .sort({ billDate: -1 }); // Get the most recent bill
-
-//         if (!latestBill) {
-//             return res.status(404).json({ message: "No bills found" });
-//         }
-
-//         res.json({
-//             billAmount: latestBill.billAmount,
-//             waterConsumption: latestBill.waterConsumption,
-//             billDate: latestBill.billDate.toISOString(), // Ensures proper ISO format
-//             imagePath: latestBill.imagePath
-//         });
-//     } catch (error) {
-//         console.error("Error fetching latest bill:", error);
-//         res.status(500).json({ message: "Server error", error: error.message });
-//     }
-// };
-
-
-// TRIAL CODE
-// import WaterBill from "../models/WaterBill.js";
-// import Tesseract from "tesseract.js";
-
-// export const extractBillDetails = (text) => {
-//     const amountMatch = text.match(/([\d,]+\.\d{2})/);
-//     const consumptionMatch = text.match(/(\d{1,5})\s?(m3|liters|cubic\s?meters|cons)/i);
-//     const dateMatch = text.match(/(\d{2})\s([A-Za-z]{3})\s(\d{4})/);
-
-//     const monthMap = {
-//         Jan: "01", Feb: "02", Mar: "03", Apr: "04", May: "05", Jun: "06",
-//         Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12"
-//     };
-
-//     let billDate = new Date("1970-01-01");
-
-//     if (dateMatch) {
-//         const day = dateMatch[1].padStart(2, "0");
-//         const month = monthMap[dateMatch[2]];
-//         const year = dateMatch[3];
-
-//         billDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
-//     }
-
-//     return {
-//         billAmount: amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : 0,
-//         waterConsumption: consumptionMatch ? parseInt(consumptionMatch[1]) : 0,
-//         billDate
-//     };
-// };
-
-// export const uploadAndAnalyze = async (req, res) => {
-//     try {
-//         if (!req.file) {
-//             return res.status(400).json({ error: "No file uploaded." });
-//         }
-
-//         const imagePath = req.file.path;
-
-//         const { data: { text } } = await Tesseract.recognize(imagePath, "eng");
-
-//         const { billAmount, waterConsumption, billDate } = extractBillDetails(text);
-
-//         const newBill = new WaterBill({
-//             user: req.user.id,
-//             billAmount,
-//             waterConsumption,
-//             billDate,
-//             imageUrl: imagePath
-//         });
-
-//         await newBill.save();
-
-//         res.status(201).json({ message: "Bill uploaded and analyzed successfully.", newBill });
-//     } catch (error) {
-//         console.error("Error processing bill:", error);
-//         res.status(500).json({ error: "Error processing the bill." });
-//     }
-// };
-
-// export const getAllBills = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const bills = await WaterBill.find({ user: userId });
-//         res.json(bills);
-//     } catch (error) {
-//         res.status(500).json({ error: "Failed to fetch data." });
-//     }
-// };
-
-// export const getLatestBill = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const latestBill = await WaterBill.findOne({ user: userId }).sort({ billDate: -1 });
-
-//         if (!latestBill) {
-//             return res.status(404).json({ message: "No bills found" });
-//         }
-
-//         res.json({
-//             billAmount: latestBill.billAmount,
-//             waterConsumption: latestBill.waterConsumption,
-//             billDate: latestBill.billDate.toISOString(),
-//             imageUrl: latestBill.imageUrl
-//         });
-//     } catch (error) {
-//         console.error("Error fetching latest bill:", error);
-//         res.status(500).json({ message: "Server error", error: error.message });
-//     }
-// };
