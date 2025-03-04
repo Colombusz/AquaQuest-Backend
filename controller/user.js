@@ -344,7 +344,7 @@ export const register = async (req, res, next) => {
 };
 
 
-// login running as api
+// login running as api OG
 export const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
