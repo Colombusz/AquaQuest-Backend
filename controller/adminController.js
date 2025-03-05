@@ -69,8 +69,9 @@ export const getTotalUsers = async () => {
 
 export const getAllUsers = async (req, res) => {
   try {
-      const users = await User.find({ role: "user" }) // Only fetch users with role "user"
-          .select("first_name last_name email role status createdAt updatedAt");
+    const users = await User.find()
+    .select("first_name last_name email role status createdAt updatedAt")
+    .sort({ createdAt: -1 });
 
       res.status(200).json(users);
   } catch (error) {
