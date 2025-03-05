@@ -171,14 +171,14 @@
 
 
 
-
-
 // TRIAL USING GROQ
 import WaterBill from "../models/WaterBill.js";
+import Prediction from "../models/Prediction.js";
 import mongoose from "mongoose";
 import axios from "axios";
 import { Groq } from "groq-sdk";
 
+// // OG
 export const getMonthlyCost = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -187,7 +187,7 @@ export const getMonthlyCost = async (req, res) => {
             { $match: { user: new mongoose.Types.ObjectId(userId) } },
             {
                 $group: {
-                    _id: { $substr: ["$billDate", 0, 7] },
+                    _id: { $substr: ["$billDate", 0, 10] },
                     totalCost: { $sum: "$billAmount" },
                 },
             },
@@ -201,6 +201,7 @@ export const getMonthlyCost = async (req, res) => {
     }
 };
 
+// // OG
 export const getMonthlyConsumption = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -209,7 +210,7 @@ export const getMonthlyConsumption = async (req, res) => {
             { $match: { user: new mongoose.Types.ObjectId(userId) } },
             {
                 $group: {
-                    _id: { $substr: ["$billDate", 0, 7] },
+                    _id: { $substr: ["$billDate", 0, 10] },
                     totalConsumption: { $sum: "$waterConsumption" },
                 },
             },
@@ -221,6 +222,42 @@ export const getMonthlyConsumption = async (req, res) => {
         console.error("Error fetching monthly consumption:", error);
         res.status(500).json({ error: "Failed to fetch monthly consumption.", details: error.message });
     }
+};
+
+// OG
+// export const getPredictedCost = async (req, res) => {
+//     try {
+//         const userId = req.user.id;
+//         const userBills = await WaterBill.find({ user: userId }).sort({ billDate: 1 });
+
+//         if (userBills.length === 0) {
+//             return res.status(404).json({ error: "No water bills found for this user." });
+//         }
+
+//         const pastData = userBills.map(entry => ({
+//             month: entry.billDate,
+//             cost: entry.billAmount,
+//         }));
+
+//         const flaskResponse = await axios.post("https://aquaquest-flask.onrender.com/api/predict-cost", {
+//             past_data: pastData,
+//             months_ahead: 1
+//         });
+
+//         return res.json({ predictedCost: flaskResponse.data.predicted_costs[0] });
+
+//     } catch (error) {
+//         console.error("Error fetching predicted cost:", error);
+//         res.status(500).json({ error: "Failed to fetch predicted cost.", details: error.message });
+//     }
+// };
+
+const getNextMonthDate = (lastBillDate) => { 
+    const currentDate = new Date(lastBillDate);
+    currentDate.setMonth(currentDate.getMonth() + 1);
+
+    // Format as YYYY-MM-DD
+    return currentDate.toISOString().split("T")[0]; 
 };
 
 export const getPredictedCost = async (req, res) => {
@@ -242,7 +279,13 @@ export const getPredictedCost = async (req, res) => {
             months_ahead: 1
         });
 
-        return res.json({ predictedCost: flaskResponse.data.predicted_costs[0] });
+        const lastBillDate = new Date(userBills[userBills.length - 1].billDate);
+        const nextMonth = getNextMonthDate(lastBillDate);
+
+        return res.json({ 
+            month: nextMonth, 
+            predictedCost: flaskResponse.data.predicted_costs[0] 
+        });
 
     } catch (error) {
         console.error("Error fetching predicted cost:", error);
@@ -269,13 +312,49 @@ export const getPredictedConsumption = async (req, res) => {
             months_ahead: 1
         });
 
-        return res.json({ predictedConsumption: flaskResponse.data.predicted_consumptions[0] });
+        const lastBillDate = new Date(userBills[userBills.length - 1].billDate);
+        const nextMonth = getNextMonthDate(lastBillDate);
+
+        return res.json({ 
+            month: nextMonth, 
+            predictedConsumption: flaskResponse.data.predicted_consumptions[0] 
+        });
 
     } catch (error) {
         console.error("Error fetching predicted consumption:", error);
         res.status(500).json({ error: "Failed to fetch predicted consumption.", details: error.message });
     }
 };
+
+
+
+//OG
+// export const getPredictedConsumption = async (req, res) => {
+//     try {
+//         const userId = req.user.id;
+//         const userBills = await WaterBill.find({ user: userId }).sort({ billDate: 1 });
+
+//         if (userBills.length === 0) {
+//             return res.status(404).json({ error: "No water bills found for this user." });
+//         }
+
+//         const pastData = userBills.map(entry => ({
+//             month: entry.billDate,
+//             consumption: entry.waterConsumption,
+//         }));
+
+//         const flaskResponse = await axios.post("https://aquaquest-flask.onrender.com/api/predict-consumption", {
+//             past_data: pastData,
+//             months_ahead: 1
+//         });
+
+//         return res.json({ predictedConsumption: flaskResponse.data.predicted_consumptions[0] });
+
+//     } catch (error) {
+//         console.error("Error fetching predicted consumption:", error);
+//         res.status(500).json({ error: "Failed to fetch predicted consumption.", details: error.message });
+//     }
+// };
 
 // WORKING NALABAS NA SA CONSOLE RESPONSE NI GROQ
 const groqClient = new Groq({
@@ -406,5 +485,66 @@ export const getWaterSavingTips = async (req, res) => {
     } catch (error) {
         console.error("Error fetching water-saving tips:", error);
         res.status(500).json({ error: "Failed to fetch water-saving tips.", details: error.message });
+    }
+};
+
+
+
+export const savePredictedData = async (userId, predictedAmount, predictedConsumption, predictedMonth) => {
+    try {
+        const prediction = new Prediction({
+            user: userId,
+            predictedAmount,
+            predictedConsumption,
+            predictedMonth,
+        });
+
+        await prediction.save();
+        console.log("Prediction saved successfully:", prediction);
+        return prediction;
+    } catch (error) {
+        console.error("Error saving predicted data:", error);
+        throw new Error("Failed to save prediction.");
+    }
+};
+
+export const getPredictedCostAndConsumption = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userBills = await WaterBill.find({ user: userId }).sort({ billDate: 1 });
+
+        if (userBills.length === 0) {
+            return res.status(404).json({ error: "No water bills found for this user." });
+        }
+
+        const pastData = userBills.map(entry => ({
+            month: entry.billDate,
+            cost: entry.billAmount,
+            consumption: entry.waterConsumption
+        }));
+
+        const flaskResponse = await axios.post("https://aquaquest-flask.onrender.com/api/predict", {
+            past_data: pastData,
+            months_ahead: 1
+        });
+
+        const lastBillDate = new Date(userBills[userBills.length - 1].billDate);
+        const nextMonth = getNextMonthDate(lastBillDate);
+
+        const predictedCost = flaskResponse.data.predicted_costs[0];
+        const predictedConsumption = flaskResponse.data.predicted_consumptions[0];
+
+        // Save the predictions in the database
+        await savePredictedData(userId, predictedCost, predictedConsumption, nextMonth);
+
+        return res.json({ 
+            month: nextMonth, 
+            predictedCost, 
+            predictedConsumption 
+        });
+
+    } catch (error) {
+        console.error("Error fetching predicted cost and consumption:", error);
+        res.status(500).json({ error: "Failed to fetch predicted cost and consumption.", details: error.message });
     }
 };

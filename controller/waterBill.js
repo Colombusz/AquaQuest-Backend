@@ -188,8 +188,12 @@
 
 
 // IF SAME NG BILLDATE DI NA PAPASOK SA DATABASE (WORKING)
+// import WaterBill from "../models/WaterBill.js";
+// import Tesseract from "tesseract.js";
 import WaterBill from "../models/WaterBill.js";
+import Prediction from "../models/Prediction.js";
 import Tesseract from "tesseract.js";
+import axios from "axios";
 
 // OG CODE
 // export const extractBillDetails = (text) => {
@@ -306,6 +310,56 @@ export const uploadAndAnalyze = async (req, res) => {
         res.status(500).json({ error: "OCR failed.", details: error.message });
     }
 };
+
+// export const uploadAndAnalyze = async (req, res) => {
+//     console.log("Files received:", req.files);
+//     console.log("Request Body:", req.body);
+
+//     if (!req.files || req.files.length === 0) {
+//         return res.status(400).json({ error: "No files uploaded or incorrect field name." });
+//     }
+
+//     try {
+//         const bills = [];
+//         const userId = req.user.id;
+
+//         for (const file of req.files) {
+//             const imagePath = file.path;
+//             const { data: { text } } = await Tesseract.recognize(imagePath, "eng");
+
+//             console.log("Extracted Text:", text);
+
+//             const { billAmount, waterConsumption, billDate } = extractBillDetails(text);
+
+//             const existingBill = await WaterBill.findOne({ billDate, user: userId });
+//             if (existingBill) {
+//                 console.log(`Duplicate bill detected for date: ${billDate}, skipping insertion.`);
+//                 return res.json({ warning: `Duplicate bill detected for date: ${billDate}. Skipping insertion.` });
+//             }
+
+//             const newBill = new WaterBill({
+//                 imageUrl: imagePath,
+//                 billAmount,
+//                 waterConsumption,
+//                 billDate: new Date(billDate),
+//                 user: userId
+//             });
+
+//             await newBill.save();
+//             bills.push(newBill);
+//         }
+
+//         if (bills.length > 0) {
+//             console.log("New bill(s) uploaded. Triggering prediction...");
+//             await savePredictedData(userId);
+//         }
+
+//         res.json({ success: true, bills });
+//     } catch (error) {
+//         console.error("OCR processing error:", error);
+//         res.status(500).json({ error: "OCR failed.", details: error.message });
+//     }
+// };
 
 export const getAllBills = async (req, res) => {
     try {

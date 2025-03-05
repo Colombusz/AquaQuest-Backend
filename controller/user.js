@@ -138,7 +138,7 @@ export const saveToken = async (req, res, next) => {
 
 export const getUserProfile = async (req, res) => {
     try {
-        console.log("User data from token:", req.user); 
+        // console.log("User data from token:", req.user); 
 
         if (!req.user || !req.user.id) {
             return res.status(401).json({ message: "Unauthorized, user not found" });
