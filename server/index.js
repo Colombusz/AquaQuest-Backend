@@ -26,12 +26,14 @@ import waterBillRoutes from "../route/waterBill.js";
 import chartAnalyticsRoutes from "../route/chartAnalytics.js";
 import adminRoutes from "../route/admin.js";
 import pdfRoutes from "../route/pdf.js";
+import gamestatRoutes from "../route/gamestat.js"
 
 // USE ROUTES
 app.use("/api", userRoutes);
 app.use("/api/waterBill", waterBillRoutes);
 app.use("/api/chart", chartAnalyticsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/gamestat", gamestatRoutes);
 app.use("/api/pdf", pdfRoutes);
 // app.use((req, res, next) => {
 //   res.header("Access-Control-Allow-Origin", "http://localhost:5173");
