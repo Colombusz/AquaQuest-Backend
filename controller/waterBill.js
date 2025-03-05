@@ -487,6 +487,8 @@ export const getLatestBill = async (req, res) => {
             return res.status(404).json({ message: "No bills found" });
         }
 
+        console.log(latestBill);
+
         res.json({
             billAmount: latestBill.billAmount,
             waterConsumption: latestBill.waterConsumption,
