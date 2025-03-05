@@ -32,19 +32,16 @@ const userModel = new mongoose.Schema({
         trim: true,
     },
 
-    images: [
-        {
-            public_id: {
-                type: String,
-                required: true,
-            },
-
-            url: {
-                type: String,
-                required: true,
-            }
+    images: {
+        public_id: {
+            type: String,
+            required: false,
+        },
+        url: {
+            type: String,
+            required: false,
         }
-    ],
+    },
 
     role: {
         type: String,

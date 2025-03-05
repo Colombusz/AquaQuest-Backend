@@ -11,3 +11,4 @@ router.get('/predicted-consumption', isAuthenticated, getPredictedConsumption);
 router.get("/water-saving-tips", isAuthenticated, getWaterSavingTips);
 
 export default router;
+

@@ -68,33 +68,34 @@ export const getTotalUsers = async () => {
 
 
 export const getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find().select("first_name last_name email role createdAt updatedAt");
-        res.status(200).json(users);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
+  try {
+      const users = await User.find({ role: "user" }) // Only fetch users with role "user"
+          .select("first_name last_name email role status createdAt updatedAt");
+
+      res.status(200).json(users);
+  } catch (error) {
+      res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
+
 
 export const getTotalWaterBillsPerMonth = async (req, res) => {
   try {
     const billsByMonthYear = await WaterBill.aggregate([
       {
-        $project: {
-          year: { $substr: ["$billDate", 6, 4] }, // Extract characters at index 6-9 (YYYY)
-          month: { $substr: ["$billDate", 3, 2] }, // Extract characters at index 3-4 (MM)
+        $addFields: {
+          billDate: { $toDate: "$billDate" }, // Ensure billDate is a Date object
         },
       },
       {
         $group: {
-          _id: { 
-            year: { $toInt: "$year" }, 
-            month: { $toInt: "$month" }
-          },
-          amount: { $sum: 1 }, // Count total bills per month-year
+          _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
+          count: { $sum: 1 }, // Count the number of bills instead of summing amounts
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }, // Sort by year then month
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 }, // Ensure sorted data
+      },
     ]);
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -102,16 +103,19 @@ export const getTotalWaterBillsPerMonth = async (req, res) => {
     const formattedData = billsByMonthYear.map((item) => ({
       year: item._id.year,
       month: monthNames[item._id.month - 1], // Convert month number to name
-      amount: item.amount,
-      label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Add label for frontend
+      count: item.count, // Number of bills
+      label: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Label for frontend
     }));
-    
+
+    console.log("✅ Total Water Bills Count Per Month Data:", formattedData); // Debugging
+
     res.json(formattedData);
   } catch (error) {
-    console.error("Error fetching water bills by month and year:", error);
+    console.error("❌ Error fetching total water bills count per month:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 export const getWaterBillCategories = async (req, res) => {
         try {
@@ -142,28 +146,70 @@ export const getWaterBillCategories = async (req, res) => {
         }
       };
 
-export const getWaterConsumptionTrend = async (req, res) => {
+
+      export const getWaterConsumptionTrend = async (req, res) => {
         try {
-          const billsByMonth = await WaterBill.aggregate([
-            {
-              $group: {
-                _id: { $month: { $dateFromString: { dateString: "$billDate", format: "%d-%m-%Y" } } }, 
-                totalConsumption: { $sum: "$waterConsumption" }, 
-              },
-            },
-            { $sort: { _id: 1 } }, 
-          ]);
-      
-          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      
-          const formattedData = billsByMonth.map((item) => ({
-            month: monthNames[item._id - 1], 
-            amount: item.totalConsumption, 
-          }));
-      
-          res.json(formattedData);
+            const consumptionByMonth = await WaterBill.aggregate([
+                {
+                    $addFields: {
+                        billDate: { $toDate: "$billDate" } // Ensure billDate is a Date object
+                    }
+                },
+                {
+                    $group: {
+                        _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
+                        totalConsumption: { $sum: "$waterConsumption" }, // Total consumption
+                        totalBills: { $sum: 1 } // Count of bills in that month
+                    }
+                },
+                {
+                    $sort: { "_id.year": 1, "_id.month": 1 } // Sort in chronological order
+                }
+            ]);
+    
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+            const formattedData = consumptionByMonth.map((item) => ({
+                month: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Format "YYYY - MMM"
+                averageConsumption: item.totalConsumption / item.totalBills, // Average consumption per bill
+                totalBills: item.totalBills // Total number of bills
+            }));
+    
+            console.log("✅ Water Consumption Trend Data:", formattedData); // Debugging
+    
+            res.json(formattedData);
         } catch (error) {
-          console.error("Error fetching water consumption trend:", error);
-          res.status(500).json({ error: "Server error" });
+            console.error("❌ Error fetching water consumption trend:", error);
+            res.status(500).json({ error: "Server error" });
         }
-      };
+    };
+
+    export const getPlayerEngagement = async (req, res) => {
+      try {
+          const engagementData = await User.aggregate([
+              {
+                  $group: {
+                      _id: {
+                          year: { $year: "$createdAt" },
+                          month: { $month: "$createdAt" },
+                          day: { $dayOfMonth: "$createdAt" }
+                      },
+                      players: { $sum: 1 }
+                  }
+              },
+              { 
+                  $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } 
+              }
+          ]);
+  
+          const formattedData = engagementData.map(entry => ({
+              date: `${entry._id.year}-${entry._id.month}-${entry._id.day}`,
+              players: entry.players
+          }));
+  
+          res.status(200).json(formattedData);
+      } catch (error) {
+          console.error("Error fetching player engagement:", error);
+          res.status(500).json({ message: "Server error", error: error.message });
+      }
+  };

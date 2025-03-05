@@ -26,7 +26,7 @@ export const isAdmin = async (req, res, next) => {
     }
 };
 
-// JWT TOKEN AUTH
+// JWT TOKEN AUTH OG
 const isAuthenticated = async (req, res, next) => {
 
     if (req.headers.authorization) {
@@ -53,6 +53,8 @@ const isAuthenticated = async (req, res, next) => {
     next()
 
 }
+
+
 
 // AUTHORIZATION MIDDLEWARE
 const authorizeRoles = (...roles) => {

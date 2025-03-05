@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 export const sendMail = async (to, subject, text, html) => {
     try {
         const info = await transporter.sendMail({
-            from: '"Aqua Quest Support" <Aqua-Quest@wgmail.com>',
+            from: '"Aqua Quest Support" <Aqua-Quest@gmail.com>',
             to,
             subject,
             text,
