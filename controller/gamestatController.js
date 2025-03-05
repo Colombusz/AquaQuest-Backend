@@ -14,13 +14,13 @@ export const CreateStatFile = async (req, res) => {
         }
 
         // Upsert (Update if exists, otherwise create)
-        const updatedStats = await PlayerStats.findOneAndUpdate(
+        await PlayerStats.findOneAndUpdate(
             { user: id },
             { ...playerStatsData, user: id },
             { new: true, upsert: true }
         );
 
-        const updatedInventory = await PlayerInventory.findOneAndUpdate(
+        await PlayerInventory.findOneAndUpdate(
             { user: id },
             { ...playerInventoryData, user: id },
             { new: true, upsert: true }
@@ -32,5 +32,17 @@ export const CreateStatFile = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 
-    
 };
+
+export const GetStatFile = async (req, res) => {
+    const { id } = req.params; // User ID
+
+    try {
+        const playerStats = await PlayerStats.findOne({ user: id });
+        const playerInventory = await PlayerInventory.findOne({ user: id });
+        res.status(200).json({ playerStats, playerInventory });
+    } catch (error) {
+        console.error("Error fetching player data:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+}
