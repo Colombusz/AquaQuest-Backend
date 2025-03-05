@@ -488,25 +488,51 @@ export const getWaterSavingTips = async (req, res) => {
     }
 };
 
-
-
-export const savePredictedData = async (userId, predictedAmount, predictedConsumption, predictedMonth) => {
+export const savePredictedData = async (req, res) => {
     try {
+        // Extract data from request body
+        const { user, predictedAmount, predictedConsumption, predictedMonth } = req.body;
+
+        if (!user || !predictedAmount || !predictedConsumption || !predictedMonth) {
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        // Create and save prediction
         const prediction = new Prediction({
-            user: userId,
+            user,
             predictedAmount,
             predictedConsumption,
             predictedMonth,
         });
 
         await prediction.save();
-        console.log("Prediction saved successfully:", prediction);
-        return prediction;
+
+        console.log("✅ Prediction saved successfully:", prediction);
+        return res.status(201).json({ message: "Prediction saved successfully!", prediction });
     } catch (error) {
-        console.error("Error saving predicted data:", error);
-        throw new Error("Failed to save prediction.");
+        console.error("❌ Error saving predicted data:", error);
+        return res.status(500).json({ error: "Failed to save prediction." });
     }
 };
+
+
+// export const savePredictedData = async (userId, predictedAmount, predictedConsumption, predictedMonth) => {
+//     try {
+//         const prediction = new Prediction({
+//             user: userId,
+//             predictedAmount,
+//             predictedConsumption,
+//             predictedMonth,
+//         });
+
+//         await prediction.save();
+//         console.log("Prediction saved successfully:", prediction);
+//         return prediction;
+//     } catch (error) {
+//         console.error("Error saving predicted data:", error);
+//         throw new Error("Failed to save prediction.");
+//     }
+// };
 
 export const getPredictedCostAndConsumption = async (req, res) => {
     try {

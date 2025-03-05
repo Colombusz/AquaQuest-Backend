@@ -4,12 +4,13 @@ import { getMonthlyConsumption, getMonthlyCost, getPredictedConsumption, getPred
 
 const router = express.Router();
 
+router.post('/save-prediction', isAuthenticated, savePredictedData);
 router.get('/monthly-cost', isAuthenticated, getMonthlyCost);
 router.get('/monthly-consumption', isAuthenticated, getMonthlyConsumption);
 router.get('/predicted-cost', isAuthenticated, getPredictedCost);
 router.get('/predicted-consumption', isAuthenticated, getPredictedConsumption);
 router.get("/water-saving-tips", isAuthenticated, getWaterSavingTips);
-router.post("/save-prediction", savePredictedData);
+
 
 export default router;
 

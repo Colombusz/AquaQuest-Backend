@@ -159,9 +159,9 @@ export const generateUserPDF = async (req, res) => {
 
   <!-- 🔹 Aqua Quest Header with Logos -->
   <div class="header">
-    <img src="http://localhost:5000/images/AQLogo.png" alt="Aqua Quest Logo" class="logo">
+    <img src="https://aqua-quest-backend-deployment.onrender.com/images/AQLogo.png" alt="Aqua Quest Logo" class="logo">
     <div class="title">Aqua Quest - Water Usage Report</div>
-    <img src="http://localhost:5000/images/TUPLogo.png" alt="University Logo" class="logo">
+    <img src="https://aqua-quest-backend-deployment.onrender.com/images/TUPLogo.png" alt="University Logo" class="logo">
   </div>
 
   <div class="container">
