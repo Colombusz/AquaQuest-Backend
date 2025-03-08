@@ -28,6 +28,7 @@ import adminRoutes from "../route/admin.js";
 import pdfRoutes from "../route/pdf.js";
 import gamestatRoutes from "../route/gamestat.js";
 import saveRoutes from "../route/save.js"
+import rewardsRoutes from "../route/rewards.js"
 
 // USE ROUTES
 app.use("/api", userRoutes);
@@ -37,6 +38,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/gamestat", gamestatRoutes);
 app.use("/api/pdf", pdfRoutes);
 app.use("/api/save", saveRoutes);
+app.use("/api/rewards", rewardsRoutes)
 
 // app.use((req, res, next) => {
 //   res.header("Access-Control-Allow-Origin", "http://localhost:5173");
