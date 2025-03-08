@@ -27,6 +27,10 @@ const SaveModel = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Prediction',
         required: true, 
+    },
+    claimed: {
+        type: Boolean,
+        default: false,
     }
 }, { timestamps: true });
 
