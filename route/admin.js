@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTotalUsers, getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAllUsers, adminLogin, adminLogout, getPlayerEngagement } from '../controller/adminController.js';
+import { getAverageConsumption, getUserWaterBills, updateUserStatus, getTotalUsers, getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAllUsers, adminLogin, adminLogout, getPlayerEngagement } from '../controller/adminController.js';
 import { isAdmin } from "../middleware/auth.js";
 const router = express.Router();
 
@@ -23,5 +23,8 @@ router.post("/admin-logout", adminLogout)
 router.get("/check-auth", isAdmin, (req, res) => {
     res.json({ role: "admin" });
 });
+router.put("/update-status/:userId", updateUserStatus);
+router.get("/user-water-bills/:userId", getUserWaterBills);
+router.get("/average-consumption", getAverageConsumption)
 
 export default router;
