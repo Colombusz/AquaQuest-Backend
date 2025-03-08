@@ -11,6 +11,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const tempDir = path.join(__dirname, "temp");
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 export const generateUserPDF = async (req, res) => {
   try {
     const userId = req.user.id; // Get the logged-in user ID
@@ -312,7 +316,7 @@ export const generateUserPDF = async (req, res) => {
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
     // Generate PDF
-    const pdfPath = path.join("temp", `user_${userId}.pdf`);
+    const pdfPath = path.join(tempDir, `user_${userId}.pdf`);
     await page.pdf({
       path: pdfPath,
       format: "A4",
