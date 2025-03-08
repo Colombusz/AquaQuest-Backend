@@ -7,6 +7,9 @@ import Prediction from "../models/Prediction.js";
 import { getWaterSavingTips } from "./chartAnalytics.js";
 import { Groq } from "groq-sdk";
 import mongoose from "mongoose";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const generateUserPDF = async (req, res) => {
   try {
@@ -28,10 +31,8 @@ export const generateUserPDF = async (req, res) => {
     const tips = await fetchWaterSavingTips(userId);
     const tipsString = tips.map(tip => `<li>${tip}</li>`).join("");
 
-
-
     const htmlContent = `
-       <!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -39,45 +40,58 @@ export const generateUserPDF = async (req, res) => {
   <title>User Report - Aqua Quest</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* 🔹 General Page Styling */
-    body { 
-      font-family: 'Arial', sans-serif; 
-      background-color: #ffffff;
-      margin: 20px;
-      padding: 0;
-    }
+/* 🔹 Fixed Header */
+.header {
+  display: flex;
+  align-items: center;
+  background-color: #0044cc;
+  justify-content: space-between;
+  padding: 10px 20px;
+  gap: 10px;
+  width: 100vw; /* Ensures full viewport width */
+  max-width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  height: 80px; /* Adjusted to fit logos */
+  box-sizing: border-box; /* Prevents padding from affecting width */
+  overflow: hidden; /* Prevents content from overflowing */
+}
 
-    /* 🔹 Header */
-    .header {
-      background-color: #0044cc;
-      color: white;
-      padding: 15px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-radius: 8px;
-    }
-    .header .logo {
-      height: 50px;
-    }
-    .header .title {
-      flex-grow: 1;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
+/* 🔹 Logo Styling */
+.header .logo {
+  height: 60px; /* Ensures logos fit */
+  max-width: 60px;
+  object-fit: contain; /* Prevents cropping */
+  flex-shrink: 0; /* Ensures logos don’t shrink */
+}
 
-    /* 🔹 Container */
-    .container {
-      width: 90%;
-      margin: 30px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-     
-    }
+/* 🔹 Title */
+.header .title {
+  flex-grow: 1;
+  max-width: 70%; /* Ensures it doesn’t get squeezed */
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+}
 
+/* 🔹 Prevent Content from Hiding Behind Header */
+.container {
+  width: 90%;
+  margin: auto;
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  margin-top: 50px; /* Adjusted for new header height */
+}
+
+    
     h1, h2 {
       color: #333;
       text-align: center;
@@ -132,15 +146,18 @@ export const generateUserPDF = async (req, res) => {
       max-width: 100%;
     }
 
-    /* 🔹 Water Saving Tips Section */
-    .tips-section {
-      margin-top: 30px;
-      padding: 20px;
-      background: #eef7ff;
-      border-left: 5px solid #0044cc;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+
+.tips-section {
+  width: 90%;
+  margin-top: 100px; /* Adjust for header overlap */
+  padding: 20px;
+  background: #eef7ff;
+  border-left: 5px solid #0044cc;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  page-break-before: always; /* Forces new page in PDF */
+}
+
     .tips-section h2 {
       color: #0044cc;
       text-align: left;
@@ -287,7 +304,10 @@ export const generateUserPDF = async (req, res) => {
         `;
 
     // Launch Puppeteer to generate the PDF
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.connect({
+      browserWSEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`,
+    });
+
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
@@ -299,9 +319,7 @@ export const generateUserPDF = async (req, res) => {
       printBackground: true
     });
 
-
     await browser.close();
-
     // Send the file for download
     res.download(pdfPath, `User_Report_${userId}.pdf`, (err) => {
       if (!err) {

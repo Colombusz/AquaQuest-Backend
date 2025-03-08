@@ -1,49 +1,49 @@
 import User from '../models/User.js';
-import WaterBill from "../models/WaterBill.js"; 
+import WaterBill from "../models/WaterBill.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 export const adminLogin = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ message: "Email and password are required." });
-        }
-
-        const admin = await User.findOne({ email, role: "admin" }).select("+password");
-
-        if (!admin) {
-            return res.status(403).json({ message: "Access denied. Admins only." });
-        }
-
-        const isPasswordValid = await admin.comparePassword(password);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid email or password." });
-        }
-
-        // Generate JWT
-        const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRES_TIME,
-        });
-
-        res.status(200).json({ success: true, token, user: { id: admin._id, email: admin.email, role: admin.role } });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "System error occurred.", success: false });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
     }
+
+    const admin = await User.findOne({ email, role: "admin" }).select("+password");
+
+    if (!admin) {
+      return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    const isPasswordValid = await admin.comparePassword(password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ id: admin._id, role: admin.role }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_TIME,
+    });
+
+    res.status(200).json({ success: true, token, user: { id: admin._id, email: admin.email, role: admin.role } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "System error occurred.", success: false });
+  }
 };
+
 export const adminLogout = async (req, res) => {
-    try {
-        res.status(200).json({ success: true, message: "Admin logged out successfully" });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "System error occurred." });
-    }
+  try {
+    res.status(200).json({ success: true, message: "Admin logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "System error occurred." });
+  }
 };
-
 
 export const getTotalWaterBills = async (req, res) => {
   try {
@@ -55,30 +55,27 @@ export const getTotalWaterBills = async (req, res) => {
   }
 };
 
-
 export const getTotalUsers = async () => {
-    try {
-        const totalUsers = await User.countDocuments();
-        return totalUsers;
-    } catch (error) {
-        console.error('Error fetching total users:', error);
-        throw error;
-    }
+  try {
+    const totalUsers = await User.countDocuments();
+    return totalUsers;
+  } catch (error) {
+    console.error('Error fetching total users:', error);
+    throw error;
+  }
 };
-
 
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
-    .select("first_name last_name email role status createdAt updatedAt")
-    .sort({ createdAt: -1 });
+      .select("first_name last_name email role status createdAt updatedAt")
+      .sort({ createdAt: -1 });
 
-      res.status(200).json(users);
+    res.status(200).json(users);
   } catch (error) {
-      res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 export const getTotalWaterBillsPerMonth = async (req, res) => {
   try {
@@ -90,7 +87,7 @@ export const getTotalWaterBillsPerMonth = async (req, res) => {
       },
       {
         $group: {
-          _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
+          _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } },
           count: { $sum: 1 }, // Count the number of bills instead of summing amounts
         },
       },
@@ -117,100 +114,180 @@ export const getTotalWaterBillsPerMonth = async (req, res) => {
   }
 };
 
+export const updateUserStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status } = req.body;
+
+    if (!["verified", "unverified"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { status },
+      { new: true, runValidators: true }
+    ).select("first_name last_name email role status createdAt updatedAt");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "User status updated", user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 export const getWaterBillCategories = async (req, res) => {
-        try {
-          const bills = await WaterBill.find({}, "billAmount"); // Get only the billAmount field
-      
-          let low = 0, medium = 0, high = 0;
-      
-          bills.forEach((bill) => {
-            if (bill.billAmount <= 1000) {
-              low++;
-            } else if (bill.billAmount <= 2000) {
-              medium++;
-            } else {
-              high++;
-            }
-          });
-      
-          const billCategories = [
-            { name: "Low (₱0-₱1,000)", value: low },
-            { name: "Medium (₱1,001-₱2,000)", value: medium },
-            { name: "High (₱2,001+)", value: high },
-          ];
-      
-          res.json(billCategories);
-        } catch (error) {
-          console.error("Error fetching water bill categories:", error);
-          res.status(500).json({ error: "Server error" });
-        }
-      };
+  try {
+    const bills = await WaterBill.find({}, "billAmount"); // Get only the billAmount field
 
+    let low = 0, medium = 0, high = 0;
 
-      export const getWaterConsumptionTrend = async (req, res) => {
-        try {
-            const consumptionByMonth = await WaterBill.aggregate([
-                {
-                    $addFields: {
-                        billDate: { $toDate: "$billDate" } // Ensure billDate is a Date object
-                    }
-                },
-                {
-                    $group: {
-                        _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } }, 
-                        totalConsumption: { $sum: "$waterConsumption" }, // Total consumption
-                        totalBills: { $sum: 1 } // Count of bills in that month
-                    }
-                },
-                {
-                    $sort: { "_id.year": 1, "_id.month": 1 } // Sort in chronological order
-                }
-            ]);
-    
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    
-            const formattedData = consumptionByMonth.map((item) => ({
-                month: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Format "YYYY - MMM"
-                averageConsumption: item.totalConsumption / item.totalBills, // Average consumption per bill
-                totalBills: item.totalBills // Total number of bills
-            }));
-    
-            console.log("✅ Water Consumption Trend Data:", formattedData); // Debugging
-    
-            res.json(formattedData);
-        } catch (error) {
-            console.error("❌ Error fetching water consumption trend:", error);
-            res.status(500).json({ error: "Server error" });
-        }
-    };
-
-    export const getPlayerEngagement = async (req, res) => {
-      try {
-          const engagementData = await User.aggregate([
-              {
-                  $group: {
-                      _id: {
-                          year: { $year: "$createdAt" },
-                          month: { $month: "$createdAt" },
-                          day: { $dayOfMonth: "$createdAt" }
-                      },
-                      players: { $sum: 1 }
-                  }
-              },
-              { 
-                  $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } 
-              }
-          ]);
-  
-          const formattedData = engagementData.map(entry => ({
-              date: `${entry._id.year}-${entry._id.month}-${entry._id.day}`,
-              players: entry.players
-          }));
-  
-          res.status(200).json(formattedData);
-      } catch (error) {
-          console.error("Error fetching player engagement:", error);
-          res.status(500).json({ message: "Server error", error: error.message });
+    bills.forEach((bill) => {
+      if (bill.billAmount <= 500) {
+        low++;
+      } else if (bill.billAmount <= 1200) {
+        medium++;
+      } else {
+        high++;
       }
-  };
+    });
+
+    const billCategories = [
+      { name: "Low (₱0-₱500)", value: low },
+      { name: "Medium (₱501-₱1,200)", value: medium },
+      { name: "High (₱1,201+)", value: high },
+    ];
+
+    res.json(billCategories);
+  } catch (error) {
+    console.error("Error fetching water bill categories:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getWaterConsumptionTrend = async (req, res) => {
+  try {
+    const consumptionByMonth = await WaterBill.aggregate([
+      {
+        $addFields: {
+          billDate: { $toDate: "$billDate" } // Ensure billDate is a Date object
+        }
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$billDate" }, year: { $year: "$billDate" } },
+          totalConsumption: { $sum: "$waterConsumption" }, // Total consumption
+          totalBills: { $sum: 1 } // Count of bills in that month
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 } // Sort in chronological order
+      }
+    ]);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const formattedData = consumptionByMonth.map((item) => ({
+      month: `${item._id.year} - ${monthNames[item._id.month - 1]}`, // Format "YYYY - MMM"
+      averageConsumption: item.totalConsumption / item.totalBills, // Average consumption per bill
+      totalBills: item.totalBills // Total number of bills
+    }));
+
+    console.log("✅ Water Consumption Trend Data:", formattedData); // Debugging
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error("❌ Error fetching water consumption trend:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getPlayerEngagement = async (req, res) => {
+  try {
+    const engagementData = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+            day: { $dayOfMonth: "$createdAt" }
+          },
+          players: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 }
+      }
+    ]);
+
+    const formattedData = engagementData.map(entry => ({
+      date: `${entry._id.year}-${entry._id.month}-${entry._id.day}`,
+      players: entry.players
+    }));
+
+    res.status(200).json(formattedData);
+  } catch (error) {
+    console.error("Error fetching player engagement:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getUserWaterBills = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userBills = await WaterBill.find({ user: userId }).sort({ billDate: 1 });
+
+    if (!userBills.length) {
+      return res.json({ barChartData: [], lineChartData: [] });
+    }
+
+    // Format data for frontend charts
+    const barChartData = userBills.map((bill) => ({
+      month: new Date(bill.billDate).toLocaleString("default", { month: "short" }), // e.g., "Jan"
+      amount: bill.billAmount || null,
+    }));
+
+    const lineChartData = userBills.map((bill) => ({
+      date: bill.billDate.toISOString().split("T")[0], // Format: YYYY-MM-DD
+      consumption: bill.waterConsumption || null,
+    }));
+
+    res.json({ barChartData, lineChartData });
+  } catch (error) {
+    console.error("❌ Error fetching user water bills:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getAverageConsumption = async (req, res) => {
+  try {
+    const users = await User.find();
+
+    let scatterData = [];
+    let index = 1; // Start from 1 instead of 0 for better readability
+
+    for (let user of users) {
+      const bills = await WaterBill.find({ user: user._id });
+
+      if (bills.length > 0) {
+        const totalConsumption = bills.reduce((sum, bill) => sum + bill.waterConsumption, 0);
+        const avgConsumption = totalConsumption / bills.length;
+
+        scatterData.push({
+          id: index++, // Numeric X-axis
+          name: `${user.first_name} ${user.last_name}`, // Full name for Tooltip
+          avgConsumption: avgConsumption,
+        });
+      }
+    }
+
+    res.json({ scatterData });
+  } catch (error) {
+    console.error("Error fetching average consumption data:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
