@@ -326,8 +326,6 @@ export const getPredictedConsumption = async (req, res) => {
     }
 };
 
-
-
 //OG
 // export const getPredictedConsumption = async (req, res) => {
 //     try {
@@ -488,6 +486,7 @@ export const getWaterSavingTips = async (req, res) => {
     }
 };
 
+// TRIAL(GOODS NA)
 export const savePredictedData = async (req, res) => {
     try {
         // Extract data from request body
@@ -497,7 +496,15 @@ export const savePredictedData = async (req, res) => {
             return res.status(400).json({ error: "Missing required fields." });
         }
 
-        // Create and save prediction
+        // Check if a prediction for the same month and user already exists
+        const existingPrediction = await Prediction.findOne({ user, predictedMonth });
+
+        if (existingPrediction) {
+            console.log(`⚠️ Duplicate prediction detected for ${predictedMonth}. Skipping insertion.`);
+            return res.status(409).json({ warning: `Prediction for ${predictedMonth} already exists. Skipping insertion.` });
+        }
+
+        // Create and save new prediction
         const prediction = new Prediction({
             user,
             predictedAmount,
@@ -514,25 +521,6 @@ export const savePredictedData = async (req, res) => {
         return res.status(500).json({ error: "Failed to save prediction." });
     }
 };
-
-
-// export const savePredictedData = async (userId, predictedAmount, predictedConsumption, predictedMonth) => {
-//     try {
-//         const prediction = new Prediction({
-//             user: userId,
-//             predictedAmount,
-//             predictedConsumption,
-//             predictedMonth,
-//         });
-
-//         await prediction.save();
-//         console.log("Prediction saved successfully:", prediction);
-//         return prediction;
-//     } catch (error) {
-//         console.error("Error saving predicted data:", error);
-//         throw new Error("Failed to save prediction.");
-//     }
-// };
 
 export const getPredictedCostAndConsumption = async (req, res) => {
     try {
@@ -574,3 +562,47 @@ export const getPredictedCostAndConsumption = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch predicted cost and consumption.", details: error.message });
     }
 };
+
+export const getMonthlyPredictedCost = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const result = await Prediction.aggregate([
+            { $match: { user: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: { $substr: ["$predictedMonth", 0, 10] },
+                    predictedCost: { $sum: "$predictedAmount" },
+                },
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching all predicted monthly cost:", error);
+        res.status(500).json({ error: "Failed to fetch predicted monthly cost.", details: error.message });
+    }
+};  
+
+export const getMonthlyPredictedConsumption = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const result = await Prediction.aggregate([
+            { $match: { user: new mongoose.Types.ObjectId(userId) } },
+            {
+                $group: {
+                    _id: { $substr: ["$predictedMonth", 0, 10] },
+                    predictedConsumption: { $sum: "$predictedConsumption" },
+                },
+            },
+            { $sort: { "_id": 1 } }
+        ]);
+
+        res.json(result);
+    } catch (error) {
+        console.error("Error fetching all predicted monthly consumption:", error);
+        res.status(500).json({ error: "Failed to fetch predicted monthly consumption.", details: error.message });
+    }
+};  

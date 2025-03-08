@@ -1,13 +1,17 @@
 import mongoose from 'mongoose';
 
 const SaveModel = new mongoose.Schema({
+    month: { 
+        type: Date, 
+        required: true,
+    },
     savedCost: { 
         type: Number, 
-        required: true 
+        required: true,
     },
     savedConsumption: { 
         type: Number, 
-        required: true 
+        required: true,
     },
     waterBill: {
         type: mongoose.Schema.Types.ObjectId,
@@ -26,5 +30,5 @@ const SaveModel = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const Save = mongoose.model('Save', PredSaveModelictionlModel);
+const Save = mongoose.model('Save', SaveModel);
 export default Save;
