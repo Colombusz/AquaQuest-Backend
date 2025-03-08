@@ -11,10 +11,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const tempDir = path.join(__dirname, "temp");
+const tempDir = path.join("../", "temp");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
+
 export const generateUserPDF = async (req, res) => {
   try {
     const userId = req.user.id; // Get the logged-in user ID
