@@ -4,6 +4,7 @@ import path from "path";
 import User from "../models/User.js";
 import WaterBill from "../models/WaterBill.js";
 import Prediction from "../models/Prediction.js";
+import Save from "../models/Save.js";
 import { getWaterSavingTips } from "./chartAnalytics.js";
 import { Groq } from "groq-sdk";
 import mongoose from "mongoose";
@@ -16,87 +17,95 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
+
+
 export const generateUserPDF = async (req, res) => {
   try {
     const userId = req.user.id; // Get the logged-in user ID
     const user = await User.findById(userId);
-    const bills = await WaterBill.find({ user: userId });
+    const bills = await WaterBill.find({ user: userId }).sort({ billDate: -1 });
     const predictions = await Prediction.find({ user: userId });
 
     if (!user) return res.status(404).json({ message: "User not found" });
+    const savedData = await Save.find({ user: userId }).populate('waterBill').populate('prediction');
 
+    const savedChartData = {
+      labels: savedData.map((save) => save.month.toISOString().split("T")[0]),
+      savedConsumption: savedData.map((save) => save.savedConsumption),
+      savedCost: savedData.map((save) => save.savedCost),
+    };
     const chartData = {
-      labels: bills.map((bill) => bill.billDate.toISOString().split("T")[0]),
-      consumption: bills.map((bill) => bill.waterConsumption),
-      billAmount: bills.map((bill) => bill.billAmount),
-      predictedConsumption: predictions.map((p) => p.predictedConsumption),
-      predictedAmount: predictions.map((p) => p.predictedAmount),
+      labels: bills.map((bill) => bill.billDate.toISOString().split("T")[0]).reverse(),
+      consumption: bills.map((bill) => bill.waterConsumption).reverse(),
+      billAmount: bills.map((bill) => bill.billAmount).reverse(),
+      predictedConsumption: predictions.map((p) => p.predictedConsumption).reverse(),
+      predictedAmount: predictions.map((p) => p.predictedAmount).reverse(),
     };
 
     const tips = await fetchWaterSavingTips(userId);
     const tipsString = tips.map(tip => `<li>${tip}</li>`).join("");
 
     const htmlContent = `
-      <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Report - Aqua Quest</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-/* 🔹 Fixed Header */
-.header {
-  display: flex;
-  align-items: center;
-  background-color: #0044cc;
-  justify-content: space-between;
-  padding: 10px 20px;
-  gap: 10px;
-  width: 100vw; /* Ensures full viewport width */
-  max-width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
-  height: 80px; /* Adjusted to fit logos */
-  box-sizing: border-box; /* Prevents padding from affecting width */
-  overflow: hidden; /* Prevents content from overflowing */
-}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>User Report - Aqua Quest</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <style>
+    /* 🔹 Fixed Header */
+    .header {
+      display: flex;
+      align-items: center;
+      background-color: #0044cc;
+      justify-content: space-between;
+      padding: 10px 20px;
+      gap: 10px;
+      width: 100vw; /* Ensures full viewport width */
+      max-width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      height: 80px; /* Adjusted to fit logos */
+      box-sizing: border-box; /* Prevents padding from affecting width */
+      overflow: hidden; /* Prevents content from overflowing */
+    }
 
-/* 🔹 Logo Styling */
-.header .logo {
-  height: 60px; /* Ensures logos fit */
-  max-width: 60px;
-  object-fit: contain; /* Prevents cropping */
-  flex-shrink: 0; /* Ensures logos don’t shrink */
-}
+    /* 🔹 Logo Styling */
+    .header .logo {
+      height: 60px; /* Ensures logos fit */
+      max-width: 60px;
+      object-fit: contain; /* Prevents cropping */
+      flex-shrink: 0; /* Ensures logos don’t shrink */
+    }
 
-/* 🔹 Title */
-.header .title {
-  flex-grow: 1;
-  max-width: 70%; /* Ensures it doesn’t get squeezed */
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: white;
-}
+    /* 🔹 Title */
+    .header .title {
+      flex-grow: 1;
+      max-width: 70%; /* Ensures it doesn’t get squeezed */
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: white;
+    }
 
-/* 🔹 Prevent Content from Hiding Behind Header */
-.container {
-  width: 90%;
-  margin: auto;
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  margin-top: 50px; /* Adjusted for new header height */
-}
+    /* 🔹 Prevent Content from Hiding Behind Header */
+    .container {
+      width: 90%;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-top: 50px; /* Adjusted for new header height */
+    }
 
-    
+  /* 🔹 Page Title */  
     h1, h2 {
       color: #333;
       text-align: center;
@@ -139,29 +148,34 @@ export const generateUserPDF = async (req, res) => {
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-top: 20px;
+       clear: both
     }
     .chart-container {
       text-align: center;
       padding: 15px;
-      background: #f9f9f9;
+      background:rgba(249, 249, 249, 0.72);
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    .chart-container canvas {
+    .chart-container.canvas {
       max-width: 100%;
     }
+    
+    .saved-charts-row {
+      margin-top: 20px; /* Reset margin top */
+      page-break-before: always; /* Force page break before saved charts row */
+      padding-top: 100px; /* Add padding to ensure it is not hidden under the header */
+    }
 
-
-.tips-section {
-  width: 90%;
-  margin-top: 100px; /* Adjust for header overlap */
-  padding: 20px;
-  background: #eef7ff;
-  border-left: 5px solid #0044cc;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  page-break-before: always; /* Forces new page in PDF */
-}
+    .tips-section {
+      width: 95%;
+      padding: 20px;
+      background: #eef7ff;
+      border-left: 5px solid #0044cc;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-top: 20px; /* Adjusted for better spacing */
+    }
 
     .tips-section h2 {
       color: #0044cc;
@@ -204,7 +218,7 @@ export const generateUserPDF = async (req, res) => {
         <th>Water Consumption (m³)</th>
         <th>Bill Amount (₱)</th>
       </tr>
-      ${bills.map((bill) => `
+      ${bills.slice(0, 4).map((bill) => `
       <tr>
         <td>${bill.billDate.toISOString().split("T")[0]}</td>
         <td>${bill.waterConsumption}</td>
@@ -233,6 +247,16 @@ export const generateUserPDF = async (req, res) => {
         <canvas id="predictedBillChart"></canvas>
       </div>
     </div>
+    <div class="charts-grid saved-charts-row">
+      <div class="chart-container">
+        <h3>Saved Water Consumption</h3>
+        <canvas id="savedConsumptionChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Saved Water Cost</h3>
+        <canvas id="savedCostChart"></canvas>
+      </div>
+    </div>
     
     <!-- 🔹 Water Saving Tips -->
     <div class="tips-section">
@@ -245,7 +269,6 @@ export const generateUserPDF = async (req, res) => {
     
   <script>
     const labels = ${JSON.stringify(chartData.labels)};
-
     // Water Consumption Chart
     new Chart(document.getElementById("waterConsumptionChart"), {
       type: "bar",
@@ -301,12 +324,42 @@ export const generateUserPDF = async (req, res) => {
         }]
       }
     });
+
+    // Saved Water Consumption Chart
+    new Chart(document.getElementById("savedConsumptionChart"), {
+      type: "line",
+      data: {
+        labels: ${JSON.stringify(savedChartData.labels)},
+        datasets: [{
+          label: "Saved Water Consumption (m³)",
+          data: ${JSON.stringify(savedChartData.savedConsumption)},
+          borderColor: "green",
+          borderWidth: 2,
+          fill: false
+        }]
+      }
+    });
+
+    // Saved Water Cost Chart
+    new Chart(document.getElementById("savedCostChart"), {
+      type: "line",
+      data: {
+        labels: ${JSON.stringify(savedChartData.labels)},
+        datasets: [{
+          label: "Saved Water Cost (₱)",
+          data: ${JSON.stringify(savedChartData.savedCost)},
+          borderColor: "purple",
+          borderWidth: 2,
+          fill: false
+        }]
+      }
+    });
   </script>
 
 </body>
 </html>
+`;
 
-        `;
 
     // Launch Puppeteer to generate the PDF
     const browser = await puppeteer.connect({
@@ -337,6 +390,7 @@ export const generateUserPDF = async (req, res) => {
     res.status(500).json({ message: "Error generating PDF" });
   }
 };
+
 
 const groqClient = new Groq({
   apiKey: process.env.GROQ_API_KEY,
