@@ -2,8 +2,147 @@ import User from '../models/User.js';
 import WaterBill from "../models/WaterBill.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import Save from '../models/Save.js';
+import PlayerStats from "../models/PlayerStats.js";
+import Prediction from "../models/Prediction.js";
 
 dotenv.config();
+
+export const getPredictionAccuracy = async (req, res) => {
+    try {
+        // Fetch all predictions
+        const predictions = await Prediction.find().populate("user");
+        const waterBills = await WaterBill.find().populate("user");
+
+        let correct = 0;
+        let overestimated = 0;
+        let underestimated = 0;
+
+        // Map predictions to actual water consumption
+        predictions.forEach(pred => {
+            const actualBill = waterBills.find(wb => 
+                wb.user.toString() === pred.user.toString() && 
+                new Date(wb.billDate).getMonth() === new Date(pred.predictedMonth).getMonth()
+            );
+
+            if (actualBill) {
+                const actual = actualBill.waterConsumption;
+                const predicted = pred.predictedConsumption;
+                const tolerance = actual * 0.1; // 10% margin
+
+                if (Math.abs(predicted - actual) <= tolerance) {
+                    correct++;
+                } else if (predicted > actual + tolerance) {
+                    overestimated++;
+                } else if (predicted < actual - tolerance) {
+                    underestimated++;
+                }
+            }
+        });
+
+        res.json({
+            correct,
+            overestimated,
+            underestimated
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const getPlayerKillStats = async (req, res) => {
+  try {
+      // Fetch all player stats and populate user data
+      const playerStats = await PlayerStats.find().populate("user", "first_name last_name");
+
+      // Format data for the stacked bar graph
+      const formattedData = playerStats.map((player) => ({
+          playerName: `${player.user.first_name} ${player.user.last_name}`,
+          kanalGoblinKills: player.Kills.KanalGoblin.TotalKills,
+          elNinoKills: player.Kills.ElNiño.TotalKills,
+          pinsalangKinamadaKills: player.Kills.PinsalangKinamada.TotalKills,
+          overallKills: player.Kills.OverallKills, // Can be used for sorting
+      }));
+
+      // Sort by overall kills in descending order (most kills first)
+      formattedData.sort((a, b) => b.overallKills - a.overallKills);
+
+      res.status(200).json(formattedData);
+  } catch (error) {
+      res.status(500).json({ message: "Error fetching player stats", error });
+  }
+};
+
+export const getTotalSavedCost = async (req, res) => {
+  try {
+    const totalSavedCost = await Save.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSavedCost: { $sum: '$savedCost' },
+        },
+      },
+    ]);
+
+    const roundedTotalSavedCost = totalSavedCost[0]?.totalSavedCost
+      ? parseFloat(totalSavedCost[0].totalSavedCost.toFixed(2))
+      : 0;
+
+    res.json({ totalSavedCost: roundedTotalSavedCost });
+  } catch (error) {
+    console.error('❌ Error fetching total saved cost:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getAvgSavingsPerUser = async (req, res) => {
+  try {
+    const userSavings = await Save.aggregate([
+      {
+        $group: {
+          _id: '$user',
+          avgSavedCost: { $avg: '$savedCost' },
+        },
+      },
+    ]);
+
+    const totalAvgSavings = userSavings.reduce((acc, user) => acc + user.avgSavedCost, 0);
+    const avgSavingsPerUser = totalAvgSavings / userSavings.length;
+
+    const roundedAvgSavingsPerUser = parseFloat(avgSavingsPerUser.toFixed(2));
+
+    res.json({ avgSavingsPerUser: roundedAvgSavingsPerUser });
+  } catch (error) {
+    console.error('❌ Error fetching average savings per user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getTotalMoneySavedOverTime = async (req, res) => {
+  try {
+    const totalMoneySavedOverTime = await Save.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$month" } },
+          totalSavedCost: { $sum: "$savedCost" },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    const formattedData = totalMoneySavedOverTime.map((item) => ({
+      month: item._id,
+      totalSavedCost: parseFloat(item.totalSavedCost.toFixed(2)),
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error("❌ Error fetching total money saved over time:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 export const adminLogin = async (req, res) => {
   try {
@@ -30,7 +169,17 @@ export const adminLogin = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES_TIME,
     });
 
-    res.status(200).json({ success: true, token, user: { id: admin._id, email: admin.email, role: admin.role } });
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: admin._id,
+        email: admin.email,
+        firstName: admin.first_name,
+        lastName: admin.last_name,
+        role: admin.role,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "System error occurred.", success: false });
