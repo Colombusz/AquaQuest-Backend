@@ -317,7 +317,7 @@ export const register = async (req, res, next) => {
             <html>
             <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
                 <div style="max-width: 600px; background: #ffffff; padding: 20px; border-radius: 10px; text-align: center;">
-                    <img src="https://your-logo-url.com/logo.png" alt="Aqua Quest Logo" style="width: 100px; margin-bottom: 20px;">
+                    <img src="https://res.cloudinary.com/dlqclovym/image/upload/v1741415631/483330529_1117583343452346_1194312538355938130_n_pjlzhe.png" alt="Aqua Quest Logo" style="width: 100px; margin-bottom: 20px;">
                     <h2>Welcome to Aqua Quest, ${first_name}!</h2>
                     <p>You're almost there! Click the button below to verify your email and activate your account.</p>
                     <a href="${verificationLink}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Verify Your Email</a>

@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.post('/createStatFiles/:id', CreateStatFile);
 router.get('/getStatFiles/:id', GetStatFile);
+
 router.get("/leaderboard", getLeaderboard);
 
 export default router;
