@@ -1,5 +1,7 @@
 // filepath: c:\Users\Danniel\Documents\GitHub\AquaQuest-Backend\controller\admin\waterBillController.js
 import WaterBill from "../../models/WaterBill.js";
+import User from "../../models/User.js";
+import Save from '../../models/Save.js';
 
 export const getTotalWaterBills = async (req, res) => {
     try {
@@ -168,5 +170,47 @@ export const getAverageConsumption = async (req, res) => {
     } catch (error) {
         console.error("Error fetching average consumption data:", error);
         res.status(500).json({ error: "Server error" });
+    }
+};
+
+export const getTopUsersWithMostSavedMoney = async (req, res) => {
+    try {
+        const topUsers = await Save.aggregate([
+            {
+                $group: {
+                    _id: "$user",
+                    totalSavedCost: { $sum: "$savedCost" }
+                }
+            },
+            {
+                $sort: { totalSavedCost: -1 }
+            },
+            {
+                $limit: 10
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            {
+                $project: {
+                    _id: 0,
+                    userId: "$user._id",
+                    userName: { $concat: ["$user.first_name", " ", "$user.last_name"] },
+                    totalSavedCost: 1
+                }
+            }
+        ]);
+
+        res.status(200).json(topUsers);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

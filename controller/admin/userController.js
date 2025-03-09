@@ -77,3 +77,16 @@ export const getPlayerEngagement = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+export const getLastFiveUsers = async (req, res) => {
+    try {
+        const users = await User.find({})
+            .sort({ createdAt: -1 }) // Sort by newest first
+            .limit(5) // Get only the last 5 users
+            .select('first_name last_name email createdAt'); // Select relevant fields
+
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

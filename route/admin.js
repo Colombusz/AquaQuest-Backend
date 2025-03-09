@@ -37,10 +37,10 @@
 import express from 'express';
 import { isAdmin } from "../middleware/auth.js";
 import { adminLogin, adminLogout } from '../controller/admin/authController.js';
-import { getPredictionAccuracy } from '../controller/admin/predictionController.js';
+import { getPredictionAccuracyForCost, getPredictionAccuracy, compareActualVsPredictedBillAmount, compareActualVsPredictedConsumption } from '../controller/admin/predictionController.js';
 import { getPlayerKillStats, getTotalMoneySavedOverTime, getTotalSavedCost, getAvgSavingsPerUser, getTotalWoins, getTotalRelics, getTotalPotions, getPlayerInventoryList, getPlayerInventoryStats, getWoinsDistribution  } from '../controller/admin/statsController.js';
-import { updateUserStatus, getTotalUsers, getAllUsers, getPlayerEngagement } from '../controller/admin/userController.js';
-import { getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAverageConsumption, getUserWaterBills } from '../controller/admin/waterBillController.js';
+import { updateUserStatus, getTotalUsers, getAllUsers, getPlayerEngagement, getLastFiveUsers } from '../controller/admin/userController.js';
+import { getTotalWaterBills, getTotalWaterBillsPerMonth, getWaterBillCategories, getWaterConsumptionTrend, getAverageConsumption, getUserWaterBills, getTopUsersWithMostSavedMoney } from '../controller/admin/waterBillController.js';
 
 const router = express.Router();
 
@@ -56,7 +56,8 @@ router.get('/total-users', async (req, res) => {
 
 router.get("/inventory-stats", getPlayerInventoryStats);  
 router.get("/woins-distribution", getWoinsDistribution); 
-
+router.get('/compare-amount', compareActualVsPredictedBillAmount);
+router.get('/compare-consumption', compareActualVsPredictedConsumption);
 router.get("/total-woins", getTotalWoins);
 router.get("/total-relics", getTotalRelics);
 router.get("/total-potions", getTotalPotions);
@@ -82,5 +83,8 @@ router.get('/avg-savings-per-user', getAvgSavingsPerUser);
 router.get('/total-money-saved-over-time', getTotalMoneySavedOverTime);
 router.get("/kills", getPlayerKillStats);
 router.get("/prediction-accuracy", getPredictionAccuracy);
+router.get("/prediction-accuracy-cost", getPredictionAccuracyForCost);
+router.get('/last-five', getLastFiveUsers);
+router.get('/top-users-with-most-saved-money', getTopUsersWithMostSavedMoney);
 
 export default router;
