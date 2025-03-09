@@ -18,10 +18,10 @@ export const getRewards = async (req, res) => {
 }
 
 export const claimReward = async (req, res) => {
-    const {saveId } = req.params;
+    const {id} = req.params;
 
     try {
-        const save = await Save.findOne({ _id: saveId, claimed: false });
+        const save = await Save.findOne({ _id: id, claimed: false });
 
         if (!save) {
             return res.status(404).json({ message: "Save not found or already claimed" });
