@@ -252,12 +252,12 @@ export const getMonthlyConsumption = async (req, res) => {
 //     }
 // };
 
-const getNextMonthDate = (lastBillDate) => { 
+const getNextMonthDate = (lastBillDate) => {
     const currentDate = new Date(lastBillDate);
     currentDate.setMonth(currentDate.getMonth() + 1);
 
     // Format as YYYY-MM-DD
-    return currentDate.toISOString().split("T")[0]; 
+    return currentDate.toISOString().split("T")[0];
 };
 
 export const getPredictedCost = async (req, res) => {
@@ -282,9 +282,9 @@ export const getPredictedCost = async (req, res) => {
         const lastBillDate = new Date(userBills[userBills.length - 1].billDate);
         const nextMonth = getNextMonthDate(lastBillDate);
 
-        return res.json({ 
-            month: nextMonth, 
-            predictedCost: flaskResponse.data.predicted_costs[0] 
+        return res.json({
+            month: nextMonth,
+            predictedCost: flaskResponse.data.predicted_costs[0]
         });
 
     } catch (error) {
@@ -315,9 +315,9 @@ export const getPredictedConsumption = async (req, res) => {
         const lastBillDate = new Date(userBills[userBills.length - 1].billDate);
         const nextMonth = getNextMonthDate(lastBillDate);
 
-        return res.json({ 
-            month: nextMonth, 
-            predictedConsumption: flaskResponse.data.predicted_consumptions[0] 
+        return res.json({
+            month: nextMonth,
+            predictedConsumption: flaskResponse.data.predicted_consumptions[0]
         });
 
     } catch (error) {
@@ -359,6 +359,8 @@ const groqClient = new Groq({
     apiKey: process.env.GROQ_API_KEY,
 });
 
+
+// // OG
 export const getWaterSavingTips = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -387,15 +389,31 @@ export const getWaterSavingTips = async (req, res) => {
         }
 
         // Construct prompt
-        const prompt = `You are a water conservation expert. Based on this data, provide 4 actionable tips to save water:\n\n${userBills
-            .map(entry => `Month: ${entry._id}, Consumption: ${entry.totalConsumption}L, Cost: ${entry.totalCost} PHP`)
-            .join("\n")}`;
+        // const prompt = `You are a water conservation expert. Based on this data, provide at least 10 clear and actionable water-saving tips:\n\n${userBills
+        //     .map(entry => `Month: ${entry._id}, Consumption: ${entry.totalConsumption}L, Cost: ${entry.totalCost} PHP`)
+        //     .join("\n")}`;
 
-        console.log("Prompt sent to Groq:", prompt);
+        // console.log("Prompt sent to Groq:", prompt);
 
-        // Retry mechanism for temporary failures
+        let previousConsumption = null;
+
+const prompt = `You are a water conservation expert. Based on this historical water usage data, analyze the trends and provide at least 10 clear and actionable water-saving tips. Also, highlight possible causes for increased consumption (e.g., leaking faucet, seasonal changes):\n\n${userBills
+    .map((entry, index) => {
+        const comparison = previousConsumption !== null
+            ? ` (${entry.totalConsumption > previousConsumption ? '↑ Increase' : '↓ Decrease'} of ${Math.abs(entry.totalConsumption - previousConsumption)}L)`
+            : '';
+        const result = `Month: ${entry._id}, Consumption: ${entry.totalConsumption}L${comparison}, Cost: ${entry.totalCost} PHP`;
+        previousConsumption = entry.totalConsumption;
+        return result;
+    })
+    .join("\n")}`;
+
+console.log("Prompt sent to Groq:", prompt);
+
+
+        // Retry mechanism
         let response;
-        let maxRetries = 3;
+        const maxRetries = 3;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -405,23 +423,16 @@ export const getWaterSavingTips = async (req, res) => {
                         { role: "system", content: "You are a helpful assistant providing water-saving tips." },
                         { role: "user", content: prompt }
                     ],
-                    max_tokens: 700, // Increased to reduce truncation risk
+                    max_tokens: 700,
                     temperature: 0.7,
                 });
 
-                console.log("Full Groq API Response:", JSON.stringify(response, null, 2));
-
-                if (response.choices?.[0]?.message?.content) {
-                    break; // Successful response
-                }
+                if (response.choices?.[0]?.message?.content) break;
             } catch (error) {
                 console.error(`Error on attempt ${attempt}:`, error);
-
-                // Retry only if it's a temporary error
                 if (attempt === maxRetries || !error.message.includes("ECONNRESET")) {
                     return res.status(500).json({ error: "Failed to fetch water-saving tips.", details: error.message });
                 }
-
                 console.warn(`Retrying... (${attempt}/${maxRetries})`);
             }
         }
@@ -434,51 +445,58 @@ export const getWaterSavingTips = async (req, res) => {
         const tipsText = response.choices[0].message.content;
         console.log("Raw Groq Tips Response:", tipsText);
 
-        // const tips = tipsText
-        // .split("\n")
-        // .filter(line => /^\d+\./.test(line) || /^•/.test(line) || /^\*\*Tip \d+:/.test(line)) // Added regex for "**Tip X:**"
-        // .map(line => line.replace(/^\*\*Tip \d+:?\*\*\s*/, "")) // Remove "**Tip X:**" to get clean tips
-        // .slice(0, 4);
-
-        // console.log("Extracted Tips:", tips);
-
+        // Extract tips
         const tips = [];
-        const tipsTextArray = tipsText.split("\n");
-
+        const lines = tipsText.split("\n");
         let currentTip = "";
 
-        tipsTextArray.forEach(line => {
-            if (/^\*\*Tip \d+:/.test(line)) { // Detects a new tip
-                if (currentTip) {
-                    tips.push(currentTip.trim()); // Push previous tip to array before starting new one
-                }
-                currentTip = line.trim(); // Start new tip section
+        lines.forEach(line => {
+            if (/^\*\*Tip \d+:/.test(line) || /^\d+\./.test(line.trim())) {
+                if (currentTip) tips.push(currentTip.trim());
+                currentTip = line.trim();
             } else if (currentTip) {
-                currentTip += " " + line.trim(); // Append details to the current tip
+                currentTip += " " + line.trim();
             }
         });
 
-        if (currentTip) {
-            tips.push(currentTip.trim()); // Push the last tip
+        if (currentTip) tips.push(currentTip.trim());
+
+        // Filter only first 10 tips
+        const finalTips = tips.filter(tip => tip).slice(0, 10);
+
+        if (finalTips.length >= 10) {
+            console.log("Extracted Tips:", finalTips);
+            return res.json({ tips: finalTips });
         }
 
-        tips.slice(0, 4); // Get only the first 4 tips
+        // If not enough tips extracted, fallback to full text split by numbered lines
+        const backupTips = tipsText
+            .split(/\n(?=\d+\.)/)
+            .map(line => line.trim())
+            .filter(tip => tip)
+            .slice(0, 10);
 
-        console.log("Extracted Tips:", tips);
-
-        if (tips.length === 0) {
-            console.warn("Groq returned no valid tips. Using fallback tips.");
-            return res.json({
-                tips: [
-                    "Reduce shower time",
-                    "Fix leaking pipes",
-                    "Use water-efficient appliances",
-                    "Collect rainwater for gardening"
-                ]
-            });
+        if (backupTips.length >= 10) {
+            console.log("Backup Extracted Tips:", backupTips);
+            return res.json({ tips: backupTips });
         }
 
-        return res.json({ tips });
+        // Fallback to hardcoded tips if still less than 10
+        console.warn("Groq returned insufficient tips. Using fallback tips.");
+        return res.json({
+            tips: [
+                "Reduce shower time to under 5 minutes.",
+                "Fix all leaking faucets and pipes immediately.",
+                "Use a broom instead of a hose to clean driveways.",
+                "Collect rainwater for watering plants.",
+                "Install water-saving showerheads and faucets.",
+                "Run washing machines with full loads only.",
+                "Turn off the tap while brushing teeth.",
+                "Water plants early in the morning or late evening.",
+                "Use a pail instead of a running hose when washing cars.",
+                "Check your meter regularly to detect hidden leaks."
+            ]
+        });
 
     } catch (error) {
         console.error("Error fetching water-saving tips:", error);
@@ -486,7 +504,8 @@ export const getWaterSavingTips = async (req, res) => {
     }
 };
 
-// TRIAL(GOODS NA)
+
+
 export const savePredictedData = async (req, res) => {
     try {
         // Extract data from request body
@@ -551,10 +570,10 @@ export const getPredictedCostAndConsumption = async (req, res) => {
         // Save the predictions in the database
         await savePredictedData(userId, predictedCost, predictedConsumption, nextMonth);
 
-        return res.json({ 
-            month: nextMonth, 
-            predictedCost, 
-            predictedConsumption 
+        return res.json({
+            month: nextMonth,
+            predictedCost,
+            predictedConsumption
         });
 
     } catch (error) {
@@ -583,7 +602,7 @@ export const getMonthlyPredictedCost = async (req, res) => {
         console.error("Error fetching all predicted monthly cost:", error);
         res.status(500).json({ error: "Failed to fetch predicted monthly cost.", details: error.message });
     }
-};  
+};
 
 export const getMonthlyPredictedConsumption = async (req, res) => {
     try {
