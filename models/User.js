@@ -15,6 +15,12 @@ const userModel = new mongoose.Schema({
         trim: true,
     },
 
+    gender: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+
     address: {
         type: String,
         required: true,

@@ -268,9 +268,9 @@ export const verifyUser = async (req, res) => {
 
 export const register = async (req, res, next) => {
     try {
-        const { first_name, last_name, address, email, password } = req.body;
+        const { first_name, last_name, gender, address, email, password } = req.body;
 
-        if (!first_name || !last_name || !address || !email || !password) {
+        if (!first_name || !last_name || !gender ||!address || !email || !password) {
             return res.status(400).json({ message: "All fields are required." });
         }
 
@@ -299,6 +299,7 @@ export const register = async (req, res, next) => {
         const user = await User.create({
             first_name,
             last_name,
+            gender,
             address,
             email,
             password,
