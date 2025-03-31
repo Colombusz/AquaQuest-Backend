@@ -156,7 +156,7 @@ export const uploadAndAnalyze = async (req, res) => {
                 console.log("Invalid water bill: Could not extract valid information or values are all zero");
                 return res.status(400).json({ 
                     error: "Invalid water bill", 
-                    message: "Could not extract valid information from the uploaded image or detected values are zero. Please ensure the bill has clear information for amount, consumption, and date." 
+                    message: "Invalid water Bill. Please try again." 
                 });
             }
 
